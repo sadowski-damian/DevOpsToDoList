@@ -2,7 +2,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "~> 6.0"
     }
   }
 
@@ -14,10 +14,13 @@ terraform {
   }
 }
 provider "aws" {
-  region = "eu-north-1"
-}
-
-provider "aws" {
   region = "eu-central-1"
-  alias  = "eu-central-1"
+
+  default_tags {
+    tags = {
+      Terraform   = "managed"
+      Environment = "prod"
+      Project     = "DevOpsToDoList"
+    }
+  }
 }
