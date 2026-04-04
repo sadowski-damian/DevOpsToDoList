@@ -45,7 +45,7 @@ resource "aws_internet_gateway" "internet-gateway" {
 # Creating Elastic IP for our future NAT Gateway use
 resource "aws_eip" "elastic-ip-nat-gateway" {
   depends_on = [aws_internet_gateway.internet-gateway]
-  domain   = "vpc"
+  domain     = "vpc"
 }
 
 # Creating a single NAT Gateway in a first public subnet so our private subnets have outbound internet connection
@@ -56,7 +56,7 @@ resource "aws_nat_gateway" "nat-gateway" {
   tags = {
     Name = "nat-gateway"
   }
-  
+
   depends_on = [aws_internet_gateway.internet-gateway]
 }
 
@@ -68,7 +68,7 @@ resource "aws_route_table" "public-subnets" {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.internet-gateway.id
   }
-  
+
   tags = {
     Name = "public-subnets-route-table"
   }
@@ -79,7 +79,7 @@ resource "aws_route_table" "private-subnets" {
   vpc_id = aws_vpc.main.id
 
   route {
-    cidr_block = "0.0.0.0/0"
+    cidr_block     = "0.0.0.0/0"
     nat_gateway_id = aws_nat_gateway.nat-gateway.id
   }
 
@@ -88,14 +88,109 @@ resource "aws_route_table" "private-subnets" {
   }
 }
 
+# Creating association between public subnets and our public - route table
 resource "aws_route_table_association" "public-route-table-association" {
-  for_each = aws_subnet.public-subnet
+  for_each       = aws_subnet.public-subnet
   subnet_id      = each.value.id
   route_table_id = aws_route_table.public-subnets.id
 }
 
+# Creating association between private subnets and our private - route table
 resource "aws_route_table_association" "private-route-table-association" {
-  for_each = aws_subnet.private-subnet
+  for_each       = aws_subnet.private-subnet
   subnet_id      = each.value.id
   route_table_id = aws_route_table.private-subnets.id
+}
+
+/*
+# Configuration of different security groups for our app
+resource "aws_security_group" "security-group-ec2" {
+  egress {
+  }
+  ingress {
+  }
+}
+*/
+
+# Security group for load balancer
+# Inbound: We allow traffic from http (80) and https (443) from any cidr using tcp
+# Outbound: We allow all trafic out of our load balancer
+resource "aws_security_group" "security-group-lb" {
+  name        = "security_group_lb"
+  description = "Security group rules for load balancer"
+  vpc_id      = aws_vpc.main.id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    cidr_blocks = ["0.0.0.0/0"]
+    protocol    = "-1"
+  }
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    cidr_blocks = ["0.0.0.0/0"]
+    protocol    = "tcp"
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    cidr_blocks = ["0.0.0.0/0"]
+    protocol    = "tcp"
+  }
+}
+/*
+resource "aws_security_group" "security-group-rds" {
+  egress {
+  }
+
+  ingress {
+  }
+}
+
+resource "aws_security_group" "security-group-prometheus" {
+  egress {
+  }
+
+  ingress {
+  }
+}
+*/
+
+# Create application load balancer so we can spread traffic between our ec2 instances
+# We deploy alb in our public subnets
+# Also we enabled cross_zone_load_balancing which will result in more efficient traffic spreading
+resource "aws_lb" "main-alb" {
+  name                             = "main-alb"
+  load_balancer_type               = "application"
+  security_groups                  = [aws_security_group.security-group-lb.id]
+  subnets                          = [for subnet in aws_subnet.public-subnet : subnet.id]
+  enable_cross_zone_load_balancing = true
+
+  tags = {
+    Name = "main-alb"
+  }
+}
+
+# Create target group for our application load balancer
+# Our app will listen on port 8080 also we use http because ALB handles TLS termination
+resource "aws_lb_target_group" "alb-target-group" {
+  name     = "lb-target-group"
+  port     = 8080
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.main.id
+}
+
+# Create listener for alb
+# Listener catches incoming traffic from the internet and forwards it to our target group
+resource "aws_lb_listener" "front_end" {
+  load_balancer_arn = aws_lb.main-alb.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.alb-target-group.arn
+  }
 }
