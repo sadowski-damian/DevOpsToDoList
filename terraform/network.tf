@@ -224,7 +224,7 @@ resource "aws_lb_target_group" "alb-target-group" {
   port     = 8080
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
-  
+
   health_check {
     # Bedzie dodane
   }
