@@ -18,3 +18,7 @@ export GHCR_PASSWORD
 
 # Login into GHCR 
 echo "$GHCR_PASSWORD" | docker login ghcr.io -u "$GHCR_LOGIN" --password-stdin
+
+# Docker run
+docker run -d --restart=always -p 8080:8080 ghcr.io/niemajeszczenamespace/app:latest
+
