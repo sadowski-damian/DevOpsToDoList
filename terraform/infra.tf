@@ -39,19 +39,19 @@ resource "aws_autoscaling_group" "main-asg" {
     version = "$Latest"
   }
 }
-resource "aws_db_instance" "rds-db-instance" {
-  allocated_storage      = 10
-  db_name                = "myrds_db"
-  engine                 = "mysql"
-  engine_version         = "8.0"
-  instance_class         = "db.t3.micro"
-  username               = ""
-  password               = ""
-  parameter_group_name   = "default.mysql8.0"
-  skip_final_snapshot    = true
-  db_subnet_group_name   = aws_db_subnet_group.db-rds-subnet-group.name
-  vpc_security_group_ids = [aws_security_group.security-group-rds.id]
-}
+# resource "aws_db_instance" "rds-db-instance" {
+#   allocated_storage      = 10
+#   db_name                = "myrds_db"
+#   engine                 = "mysql"
+#   engine_version         = "8.0"
+#   instance_class         = "db.t3.micro"
+#   username               = ""
+#   password               = ""
+#   parameter_group_name   = "default.mysql8.0"
+#   skip_final_snapshot    = true
+#   db_subnet_group_name   = aws_db_subnet_group.db-rds-subnet-group.name
+#   vpc_security_group_ids = [aws_security_group.security-group-rds.id]
+# }
 
 resource "aws_instance" "ec2-prometheus-instance" {
   ami                    = var.amazon-linux-2023-6_1-AMI
