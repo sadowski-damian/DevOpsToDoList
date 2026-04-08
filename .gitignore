@@ -2,4 +2,7 @@
 .terraform
 *.tfstate
 *.tfstate.*
-src
+.env
+*.env
+src/ToDoApi/bin
+src/ToDoApi/obj

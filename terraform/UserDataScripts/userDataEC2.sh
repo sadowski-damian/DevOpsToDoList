@@ -20,7 +20,7 @@ export GHCR_PASSWORD
 echo "$GHCR_PASSWORD" | docker login ghcr.io -u "$GHCR_LOGIN" --password-stdin
 
 # Docker run our app
-docker run -d --restart=always -p 8080:8080 ghcr.io/niemajeszczenamespace/app:latest
+docker run -d --restart=always -p 8080:8080 ghcr.io/sadowski-damian/app:latest
 
 # Docker run node-exporter for prometheus
 docker run -d --restart=always --pid="host" --net="host" -v "/:/host:ro,rslave" prom/node-exporter --path.rootfs=/host
