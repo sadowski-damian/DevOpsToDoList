@@ -53,6 +53,7 @@ resource "aws_autoscaling_group" "main_asg" {
 #   db_subnet_group_name   = aws_db_subnet_group.db_rds_subnet_group.name
 #   vpc_security_group_ids = [aws_security_group.security_group_rds.id]
 # }
+#
 
 resource "aws_instance" "ec2_prometheus_instance" {
   ami                    = var.amazon_linux_2023_6_1_AMI
