@@ -9,7 +9,7 @@ terraform {
   cloud {
     organization = "damian-sadowski-projekty"
     workspaces {
-      name = "devtodolist-infra"
+      name = "wenttoprod-infra"
     }
   }
 }
@@ -20,7 +20,7 @@ provider "aws" {
     tags = {
       Terraform   = "managed"
       Environment = "prod"
-      Project     = "DevOpsToDoList"
+      Project     = "WentToProd"
     }
   }
 }

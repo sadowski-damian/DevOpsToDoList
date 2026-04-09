@@ -1,5 +1,5 @@
-# DevOpsToDoList
-## Ponizszy diagram przedstawia  archietkrure aplikacji DevOpsToDOList wdrozonej na AWS
+# WentToProd
+## Ponizszy diagram przedstawia  archietkrure aplikacji WentToProd wdrozonej na AWS
 ![Diagram infrastruktury AWS](docs/infra.png)
 
 ### Glowne komponenty:

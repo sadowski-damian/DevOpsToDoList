@@ -4,12 +4,12 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copy .csproj file and then restore
-COPY ToDoApi/*.csproj ./ToDoApi/
-RUN dotnet restore ToDoApi/*.csproj
+COPY WentToProd/*.csproj ./WentToProd/
+RUN dotnet restore WentToProd/*.csproj
 
 # Copy all files and then publish
-COPY ToDoApi/ ./ToDoApi/
-RUN dotnet publish ToDoApi/*.csproj -c Release -o /app/publish
+COPY WentToProd/ ./WentToProd/
+RUN dotnet publish WentToProd/*.csproj -c Release -o /app/publish
 
 # Changing base image 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
@@ -22,5 +22,5 @@ COPY --from=build /app/publish .
 EXPOSE 8080
 
 # Entrypoint for the container
-ENTRYPOINT ["dotnet", "ToDoApi.dll"] 
+ENTRYPOINT ["dotnet", "WentToProd.dll"] 
 

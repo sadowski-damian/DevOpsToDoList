@@ -4,5 +4,5 @@
 *.tfstate.*
 .env
 *.env
-src/ToDoApi/bin
-src/ToDoApi/obj
+src/WentToProd/bin
+src/WentToProd/obj
