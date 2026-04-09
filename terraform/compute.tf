@@ -7,7 +7,7 @@ resource "aws_launch_template" "ec2_launch_template" {
     name = aws_iam_instance_profile.ec2_instance_profile.name
   }
 
-  image_id      = var.amazon_linux_2023_6_1_AMI
+  image_id      = data.aws_ami.amazon_linux_2023.id
   instance_type = "t3.micro"
 
   network_interfaces {
@@ -56,7 +56,7 @@ resource "aws_autoscaling_group" "main_asg" {
 #
 
 resource "aws_instance" "ec2_prometheus_instance" {
-  ami                    = var.amazon_linux_2023_6_1_AMI
+  ami                    = data.aws_ami.amazon_linux_2023.id
   instance_type          = "t3.micro"
   subnet_id              = aws_subnet.private_subnet[data.aws_availability_zones.available.names[0]].id
   vpc_security_group_ids = [aws_security_group.security_group_prometheus.id]
