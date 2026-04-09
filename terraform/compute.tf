@@ -37,7 +37,7 @@ resource "aws_autoscaling_group" "main_asg" {
 
   launch_template {
     id      = aws_launch_template.ec2_launch_template.id
-    version = "$Latest"
+    version = aws_launch_template.ec2_launch_template.latest_version
   }
 }
 # resource "aws_db_instance" "rds_db_instance" {
