@@ -42,8 +42,8 @@ jobs:
           tags: ghcr.io/${{ github.repository_owner }}/app:latest
 
       - name: Terraform initialization
-        working-directory: ./terraform
-        run: terraform init
+        working-directory: .
+        run: terraform -chdir=./terraform init
 
       - name: Terraform apply
         working-directory: .
