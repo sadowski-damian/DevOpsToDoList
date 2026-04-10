@@ -8,7 +8,7 @@ resource "aws_launch_template" "ec2_launch_template" {
   }
 
   image_id      = data.aws_ami.amazon_linux_2023.id
-  instance_type = "t3.micro"
+  instance_type = var.instance_type
 
   network_interfaces {
     associate_public_ip_address = false
@@ -57,14 +57,14 @@ resource "aws_autoscaling_group" "main_asg" {
 
 resource "aws_instance" "ec2_monitoring_instance" {
   ami                    = data.aws_ami.amazon_linux_2023.id
-  instance_type          = "t3.micro"
+  instance_type          = var.instance_type
   subnet_id              = aws_subnet.private_subnet[data.aws_availability_zones.available.names[0]].id
   vpc_security_group_ids = [aws_security_group.security_group_monitoring.id]
   user_data_base64 = base64encode(templatefile("./UserDataScripts/userDataMonitoringEC2.sh", {
     prometheus_config          = file("./monitoring/prometheus/prometheus.yaml")
     grafana_datasource         = file("./monitoring/grafana/provisioning/datasources/datasource.yaml")
     grafana_dashboard_provider = file("./monitoring/grafana/provisioning/dashboards/dashboard.yaml")
-    docker_compose             = file("./monitoring/docker-compose.yaml")
+    docker_compose             = file("./monitoring/monitoring-compose.yaml")
   }))
 
   iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile_monitoring.name

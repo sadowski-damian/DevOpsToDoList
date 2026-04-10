@@ -163,18 +163,18 @@ resource "aws_security_group" "security_group_lb" {
 # Security group for RDS
 # Inbound: We allow traffic from ec2 security group on port 3306 
 # Outbound: We allow all trafic out of our rds instance
-resource "aws_security_group" "security_group_rds" {
-  name        = "security_group_rds"
-  description = "Security group rules for rds"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = [aws_security_group.security_group_ec2.id]
-  }
-}
+# resource "aws_security_group" "security_group_rds" {
+#   name        = "security_group_rds"
+#   description = "Security group rules for rds"
+#   vpc_id      = aws_vpc.main.id
+# 
+#   ingress {
+#     from_port       = 3306
+#     to_port         = 3306
+#     protocol        = "tcp"
+#     security_groups = [aws_security_group.security_group_ec2.id]
+#   }
+# }
 
 
 # Security group for our monitoringinstance
@@ -208,14 +208,14 @@ resource "aws_security_group" "security_group_monitoring" {
 }
 
 
-resource "aws_db_subnet_group" "db_rds_subnet_group" {
-  name       = "db-rds-subnet-group"
-  subnet_ids = [aws_subnet.private_subnet[data.aws_availability_zones.available.names[0]].id, aws_subnet.private_subnet[data.aws_availability_zones.available.names[1]].id]
-
-  tags = {
-    Name = "RDS subnet group"
-  }
-}
+# resource "aws_db_subnet_group" "db_rds_subnet_group" {
+#   name       = "db-rds-subnet-group"
+#   subnet_ids = [aws_subnet.private_subnet[data.aws_availability_zones.available.names[0]].id, aws_subnet.private_subnet[data.aws_availability_zones.available.names[1]].id]
+# 
+#   tags = {
+#     Name = "RDS subnet group"
+#   }
+# }
 
 
 # Create application load balancer so we can spread traffic between our ec2 instances

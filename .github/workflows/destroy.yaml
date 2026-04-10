@@ -24,9 +24,6 @@ jobs:
       with:
         terraform_version: ${{ vars.TF_VERSION }}
         cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
-          
-    - name: Copy monitoring config
-      run: cp -r monitoring terraform/monitoring
       
     - name: Terraform initialization 
       working-directory: ./terraform
