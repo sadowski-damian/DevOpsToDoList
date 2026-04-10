@@ -13,13 +13,14 @@ sudo mkdir -p /usr/local/lib/docker/cli-plugins
 sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
 sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
-# Prometheus configuration
+# Creat /etc/prometheus dir as we will be using it to pass our prometheus conf
 sudo mkdir -p /etc/prometheus
+# Passing prometheus conf 
 sudo tee /etc/prometheus/prometheus.yml > /dev/null << 'PROMEOF'
 ${prometheus_config}
 PROMEOF
 
-# Grafana provisioning
+# Same as with prometheus we create directories so we can pass our configuration files
 sudo mkdir -p /etc/grafana/provisioning/datasources
 sudo mkdir -p /etc/grafana/provisioning/dashboards
 
@@ -31,10 +32,11 @@ sudo tee /etc/grafana/provisioning/dashboards/dashboard.yaml > /dev/null << 'EOF
 ${grafana_dashboard_provider}
 EOF
 
-# Copy docker-compose and start
+# Copy our dockercompose
 sudo tee /home/ec2-user/docker-compose.yaml > /dev/null << 'EOF'
 ${docker_compose}
 EOF
 
+# And start 
 cd /home/ec2-user && sudo docker compose up -d
 
