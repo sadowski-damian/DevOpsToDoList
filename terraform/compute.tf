@@ -60,12 +60,12 @@ resource "aws_instance" "ec2_monitoring_instance" {
   instance_type          = "t3.micro"
   subnet_id              = aws_subnet.private_subnet[data.aws_availability_zones.available.names[0]].id
   vpc_security_group_ids = [aws_security_group.security_group_monitoring.id]
-  user_data_base64 = templatefile("./UserDataScripts/userDataMonitoringEC2.sh", {
+  user_data_base64 = base64encode(templatefile("./UserDataScripts/userDataMonitoringEC2.sh", {
     prometheus_config          = file("./monitoring/prometheus/prometheus.yaml")
     grafana_datasource         = file("./monitoring/grafana/provisioning/datasources/datasource.yaml")
     grafana_dashboard_provider = file("./monitoring/grafana/provisioning/dashboards/dashboard.yaml")
     docker_compose             = file("./monitoring/docker-compose.yaml")
-  })
+  }))
 
   iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile_monitoring.name
 
