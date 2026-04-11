@@ -1,7 +1,8 @@
 name: Deploy Image and Infrastructure
 on:
   workflow_dispatch:
-
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
 jobs:
   build:
     name: Build and push image
