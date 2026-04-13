@@ -52,5 +52,5 @@ output "subnet_group_id" {
 
 output "app_port" {
   description = "Port number of our app"
-  value = var.app_port
+  value       = var.app_port
 }
