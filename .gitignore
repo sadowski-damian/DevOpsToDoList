@@ -6,3 +6,5 @@
 *.env
 src/WentToProd/bin
 src/WentToProd/obj
+src/WentToProd/appsettings.Development.json
+src/WentToProd/*

@@ -8,4 +8,3 @@ locals {
     (data.aws_availability_zones.available.names[1]) = "10.0.102.0/24"
   }
 }
-

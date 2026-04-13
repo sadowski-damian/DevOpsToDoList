@@ -18,11 +18,14 @@ services:
     volumes:
       # Same as with prometheus 
       - grafana_data:/var/lib/grafana
+      # Mounts datasource and dashboard provides configs from host 
       - /etc/grafana/provisioning:/etc/grafana/provisioning
     # Prometheus has to be up before grafana
     depends_on:
       - prometheus
 
 volumes:
+  # Grafana data that stays between container restarts
   grafana_data:
+  # Prometheus metrics that stays between container restarts 
   prometheus_data:

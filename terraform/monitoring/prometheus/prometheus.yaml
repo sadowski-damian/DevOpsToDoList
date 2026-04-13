@@ -1,9 +1,0 @@
-scrape_configs:
-  - job_name: 'scrape_ec2'
-    ec2_sd_configs:
-      - region: eu-central-1
-        port: 9100
-        refresh_interval: 30s
-        filters:
-          - name: tag:Name
-            values: ["EC2-app-instance-ASG"]

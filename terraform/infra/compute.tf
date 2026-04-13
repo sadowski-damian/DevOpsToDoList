@@ -12,7 +12,7 @@ resource "aws_launch_template" "ec2_launch_template" {
 
   network_interfaces {
     associate_public_ip_address = false
-    security_groups             = [aws_security_group.security_group_ec2.id]
+    security_groups             = [data.terraform_remote_state.network.outputs.ec2_security_group]
   }
 
   user_data = filebase64("./UserDataScripts/userDataAppEC2.sh")
@@ -27,7 +27,8 @@ resource "aws_launch_template" "ec2_launch_template" {
 
 # ASG
 resource "aws_autoscaling_group" "main_asg" {
-  vpc_zone_identifier       = [for subnet in aws_subnet.private_subnet : subnet.id]
+  name                      = "main-asg"
+  vpc_zone_identifier       = [data.terraform_remote_state.network.outputs.first_private_subnet_id, data.terraform_remote_state.network.outputs.second_private_subnet_id]
   desired_capacity          = 2
   max_size                  = 4
   min_size                  = 1
@@ -40,31 +41,18 @@ resource "aws_autoscaling_group" "main_asg" {
     version = aws_launch_template.ec2_launch_template.latest_version
   }
 }
-# resource "aws_db_instance" "rds_db_instance" {
-#   allocated_storage      = 10
-#   db_name                = "myrds_db"
-#   engine                 = "mysql"
-#   engine_version         = "8.0"
-#   instance_class         = "db.t3.micro"
-#   username               = ""
-#   password               = ""
-#   parameter_group_name   = "default.mysql8.0"
-#   skip_final_snapshot    = true
-#   db_subnet_group_name   = aws_db_subnet_group.db_rds_subnet_group.name
-#   vpc_security_group_ids = [aws_security_group.security_group_rds.id]
-# }
-#
 
 resource "aws_instance" "ec2_monitoring_instance" {
   ami                    = data.aws_ami.amazon_linux_2023.id
   instance_type          = var.instance_type
-  subnet_id              = aws_subnet.private_subnet[data.aws_availability_zones.available.names[0]].id
-  vpc_security_group_ids = [aws_security_group.security_group_monitoring.id]
+  subnet_id              = data.terraform_remote_state.network.outputs.first_private_subnet_id
+  vpc_security_group_ids = [data.terraform_remote_state.network.outputs.monitoring_security_group]
   user_data_base64 = base64encode(templatefile("./UserDataScripts/userDataMonitoringEC2.sh", {
     prometheus_config          = file("./monitoring/prometheus/prometheus.yaml")
     grafana_datasource         = file("./monitoring/grafana/provisioning/datasources/datasource.yaml")
     grafana_dashboard_provider = file("./monitoring/grafana/provisioning/dashboards/dashboard.yaml")
     docker_compose             = file("./monitoring/monitoring-compose.yaml")
+    grafana_dashboard          = file("./monitoring/grafana/dashboards/node-exporter.json")
   }))
 
   iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile_monitoring.name

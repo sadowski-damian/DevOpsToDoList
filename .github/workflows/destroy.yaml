@@ -27,9 +27,9 @@ jobs:
         cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
       
     - name: Terraform initialization 
-      working-directory: ./terraform
+      working-directory: ./terraform/infra
       run: terraform init
           
     - name: Terraform destroy
-      working-directory: ./terraform
+      working-directory: ./terraform/infra
       run: terraform destroy -auto-approve

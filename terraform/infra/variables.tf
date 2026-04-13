@@ -8,9 +8,3 @@ variable "instance_type" {
     error_message = "EC2 instance has to be type t3.micro or t2.micro"
   }
 }
-
-variable "app_port" {
-  type        = number
-  description = "Port number for our .net app"
-  default     = 8080
-}

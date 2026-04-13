@@ -1,0 +1,11 @@
+# Grafana dashboard provisioning conf
+# Tells Grafana to load dashboards from /etc/grafana/dashboards directory on startup
+# type: file - dashboards are stored as JSON on disk
+# folder: '' - dashboards will apear in the root folder in Grafana
+apiVersion: 1
+providers:
+  - name: default
+    folder: ''
+    type: file
+    options:
+      path: /etc/grafana/dashboards

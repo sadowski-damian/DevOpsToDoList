@@ -1,0 +1,56 @@
+output "first_public_subnet_id" {
+  description = "ID of our first private subnet"
+  value       = aws_subnet.public_subnet[data.aws_availability_zones.available.names[0]].id
+}
+
+output "second_public_subnet_id" {
+  description = "ID of our second public subnet"
+  value       = aws_subnet.public_subnet[data.aws_availability_zones.available.names[1]].id
+}
+
+output "first_private_subnet_id" {
+  description = "ID of our first private subnet"
+  value       = aws_subnet.private_subnet[data.aws_availability_zones.available.names[0]].id
+}
+
+output "second_private_subnet_id" {
+  description = "ID of our second private subnet"
+  value       = aws_subnet.private_subnet[data.aws_availability_zones.available.names[1]].id
+}
+
+output "vpc_id" {
+  description = "ID of our VPC"
+  value       = aws_vpc.main.id
+}
+
+output "ec2_security_group" {
+  description = "ID of ec2 security group"
+  value       = aws_security_group.security_group_ec2.id
+}
+
+output "lb_security_group" {
+  description = "ID of lb security group"
+  value       = aws_security_group.security_group_lb.id
+}
+
+output "monitoring_security_group" {
+  description = "ID of monitoring security group"
+  value       = aws_security_group.security_group_monitoring.id
+}
+
+output "rds_security_group" {
+  description = "ID of lb security group"
+  value       = aws_security_group.security_group_rds.id
+}
+
+output "subnet_group_id" {
+  description = "ID db subnet group"
+  value       = aws_db_subnet_group.db_rds_subnet_group.id
+}
+
+
+
+output "app_port" {
+  description = "Port number of our app"
+  value = var.app_port
+}
