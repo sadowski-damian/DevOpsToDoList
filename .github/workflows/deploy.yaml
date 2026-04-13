@@ -36,12 +36,49 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/app:${{ github.sha }}
             ghcr.io/${{ github.repository_owner }}/app:latest
             
-  terraform-plan-network:
+  terraform-network-plan:
     name: Terraform plan network
     runs-on: ubuntu-latest
     needs: build
-    outputs:
-      exitcode: ${{ steps.plan_network.outputs.exitcode }}
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+
+    - name: AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_KEY }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v4
+      with:
+        terraform_version: ${{ vars.TF_VERSION }}
+        cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+    - name: Terraform initialization
+      working-directory: ./terraform/network
+      run: terraform init
+
+    - name: Terraform format check
+      working-directory: ./terraform/network
+      run: terraform fmt -check
+
+    - name: Terraform validate
+      working-directory: ./terraform/network
+      run: terraform validate
+
+    - name: Terraform plan
+      working-directory: ./terraform/network
+      id: plan_network
+      run: terraform plan
+           
+  terraform-network-apply:
+    name: Terraform apply network
+    runs-on: ubuntu-latest
+    needs: terraform-network-plan
+    environment: network-apply
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -62,96 +99,20 @@ jobs:
       - name: Terraform initialization
         working-directory: ./terraform/network
         run: terraform init
-
-      - name: Terraform format check
-        working-directory: ./terraform/network
-        run: terraform fmt -check
-
-      - name: Terraform validate
-        working-directory: ./terraform/network
-        run: terraform validate
 
       - name: Terraform plan with output
         working-directory: ./terraform/network
         id: plan_network
-        run: |
-          set +e
-          terraform plan -out=tfplanNETWORK -detailed-exitcode
-          exitcode=$?
-          set -e
-          if [ $exitcode -eq 1 ]; then
-            exit 1
-          fi
-          echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
-        continue-on-error: true
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        if: steps.plan_network.outputs.exitcode == '2'
-        with:
-          name: tfplanNETWORK
-          path: ./terraform/network/tfplanNETWORK
-  
-  manual-approve-network:
-    name: Manual approval
-    runs-on: ubuntu-latest
-    if: needs.terraform-plan-network.outputs.exitcode == '2'
-    needs: terraform-plan-network
-    permissions:
-      issues: write
-    steps:
-      - name: Manual approval
-        uses: trstringer/manual-approval@v1
-        with:
-          secret: ${{ secrets.GITHUB_TOKEN }}
-          approvers: sadowski-damian
-          minimum-approvals: 1
-          issue-title: "Manual Approval required for Terraform Apply"
-          issue-body: "Please approve or deny the deployment"
-  
-  terraform-apply-network:
-    name: Terraform apply
-    runs-on: ubuntu-latest
-    if: needs.terraform-plan-network.outputs.exitcode == '2'
-    needs: [manual-approve-network, terraform-plan-network]
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-
-      - name: AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
-        with:
-          terraform_version: ${{ vars.TF_VERSION }}
-          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
-
-      - name: Terraform initialization
-        working-directory: ./terraform/network
-        run: terraform init
-
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplanNETWORK
-          path: ./terraform/network/
+        run: terraform plan -out=tfplanNETWORK
 
       - name: Terraform apply
         working-directory: ./terraform/network
         run: terraform apply -auto-approve tfplanNETWORK
         
-  terraform-plan-db:
+  terraform-db-plan:
     name: Terraform plan db
     runs-on: ubuntu-latest
-    outputs:
-      exitcode: ${{ steps.plan_db.outputs.exitcode }}
-    if: needs.terraform-apply-network.result == 'success' || needs.terraform-apply-network.result == 'skipped'
-    needs: terraform-apply-network
+    needs: terraform-network-apply
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -181,49 +142,16 @@ jobs:
         working-directory: ./terraform/db
         run: terraform validate
 
-      - name: Terraform plan with output
+      - name: Terraform plan
         working-directory: ./terraform/db
         id: plan_db
-        run: |
-          set +e
-          terraform plan -out=tfplanDB -detailed-exitcode
-          exitcode=$?
-          set -e
-          if [ $exitcode -eq 1 ]; then
-            exit 1
-          fi
-          echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
-        continue-on-error: true
+        run: terraform plan
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        if: steps.plan_db.outputs.exitcode == '2'
-        with:
-          name: tfplanDB
-          path: ./terraform/db/tfplanDB
-
-  manual-approve-db:
-    name: Manual approval
+  terraform-db-apply:
+    name: Terraform apply db
     runs-on: ubuntu-latest
-    if: needs.terraform-plan-db.outputs.exitcode == '2'
-    needs: terraform-plan-db
-    permissions:
-      issues: write
-    steps:
-      - name: Manual approval
-        uses: trstringer/manual-approval@v1
-        with:
-          secret: ${{ secrets.GITHUB_TOKEN }}
-          approvers: sadowski-damian
-          minimum-approvals: 1
-          issue-title: "Manual Approval required for Terraform Apply"
-          issue-body: "Please approve or deny the deployment"
-
-  terraform-apply-db:
-    name: Terraform apply
-    runs-on: ubuntu-latest
-    if: needs.terraform-plan-db.outputs.exitcode == '2'
-    needs: [ manual-approve-db, terraform-plan-db ]
+    needs: terraform-db-plan
+    environment: db-apply
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -245,23 +173,19 @@ jobs:
         working-directory: ./terraform/db
         run: terraform init
 
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplanDB
-          path: ./terraform/db/
+      - name: Terraform plan with output
+        working-directory: ./terraform/db
+        id: plan_db
+        run: terraform plan -out=tfplanDB
 
       - name: Terraform apply
         working-directory: ./terraform/db
         run: terraform apply -auto-approve tfplanDB
 
-  terraform-plan-infra:
+  terraform-infra-plan:
     name: Terraform plan infra
     runs-on: ubuntu-latest
-    if: needs.terraform-apply-network.result == 'success' || needs.terraform-apply-network.result == 'skipped'
-    needs: terraform-apply-network
-    outputs:
-      exitcode: ${{ steps.plan_infra.outputs.exitcode }}
+    needs: terraform-network-apply
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -294,50 +218,17 @@ jobs:
       - name: Terraform plan with output
         working-directory: ./terraform/infra
         id: plan_infra
-        run: |
-          set +e
-          terraform plan -out=tfplanINFRA -detailed-exitcode
-          exitcode=$?
-          set -e
-          if [ $exitcode -eq 1 ]; then
-            exit 1
-          fi
-          echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
-        continue-on-error: true
+        run: terraform plan
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        if: steps.plan_infra.outputs.exitcode == '2'
-        with:
-          name: tfplanINFRA
-          path: ./terraform/infra/tfplanINFRA
-          
-  manual-approve-infra:
-    name: Manual approval 
+  terraform-infra-apply:
+    name: Terraform apply infra
     runs-on: ubuntu-latest
-    if: needs.terraform-plan-infra.outputs.exitcode == '2'
-    needs: terraform-plan-infra
-    permissions: 
-      issues: write
-    steps:
-      - name: Manual approval
-        uses: trstringer/manual-approval@v1
-        with:
-          secret: ${{ secrets.GITHUB_TOKEN }}
-          approvers: sadowski-damian
-          minimum-approvals: 1
-          issue-title: "Manual Approval required for Terraform Apply"
-          issue-body: "Please approve or deny the deployment"
-    
-  terraform-apply-infra:
-    name: Terraform apply
-    runs-on: ubuntu-latest
-    if: needs.terraform-plan-infra.outputs.exitcode == '2'
-    needs: [manual-approve-infra, terraform-plan-infra]
+    environment: infra-apply
+    needs: terraform-infra-plan
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
-        
+
       - name: AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -354,12 +245,11 @@ jobs:
       - name: Terraform initialization
         working-directory: ./terraform/infra
         run: terraform init
-      
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplanINFRA
-          path: ./terraform/infra/
+
+      - name: Terraform plan with output
+        working-directory: ./terraform/infra
+        id: plan_infra
+        run: terraform plan -out=tfplanINFRA
 
       - name: Terraform apply
         working-directory: ./terraform/infra
@@ -368,11 +258,7 @@ jobs:
   write-to-db:
     name: Register deploy in DB
     runs-on: ubuntu-latest
-    needs: [terraform-apply-infra, terraform-apply-db, terraform-apply-network]
-    if: |
-      (needs.terraform-apply-network.result == 'success' || needs.terraform-apply-network.result == 'skipped') &&
-      (needs.terraform-apply-infra.result == 'success' || needs.terraform-apply-infra.result == 'skipped') &&
-      (needs.terraform-apply-db.result == 'success' || needs.terraform-apply-db.result == 'skipped')
+    needs: [terraform-network-apply, terraform-db-apply, terraform-infra-apply]
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -395,22 +281,19 @@ jobs:
         run: terraform init
         
       - name: Trigger instance refresh
-        if: needs.terraform-apply-infra.result == 'skipped'
         run: |
           aws autoscaling start-instance-refresh --auto-scaling-group-name main-asg --preferences MinHealthyPercentage=50,InstanceWarmup=300                                                                                               
-          aws autoscaling wait instance-refresh-succeeded --auto-scaling-group-name main-asg                                                                                                                     
+          aws autoscaling wait instance-refresh-succeeded --auto-scaling-group-name main-asg
 
-      - name: Wait for instances
-        if: needs.terraform-apply-infra.result == 'success'
+      - name: Wait for ALB health
         run: |
-          ALB_DNS=$(terraform -chdir=./terraform/infra output -raw alb_dns_name)
-          for ((i=0; i<20; i++)); do                                                                                                                                     
+          ALB_DNS=$(terraform -chdir=./terraform/infra output -raw alb_dns_name)                                                                                   
+          for ((i=0; i<10; i++)); do                                                                                                                               
             curl -sf "http://$ALB_DNS/health" && break
-            echo "Attempt $i/20, retrying in 15s..."                                                                                                                     
-            sleep 15                                                                                                                                                     
-          done
-          curl -sf "http://$ALB_DNS/health" || exit 1
-
+            echo "Attempt $i/10, retrying in 15s..."
+            sleep 15                                                                                                                                               
+          done                              
+          curl -sf "http://$ALB_DNS/health" || exit 1 
         
       - name: Register Deployment in DB
         run: |
