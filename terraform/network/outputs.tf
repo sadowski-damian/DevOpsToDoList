@@ -48,9 +48,22 @@ output "subnet_group_id" {
   value       = aws_db_subnet_group.db_rds_subnet_group.id
 }
 
-
-
 output "app_port" {
   description = "Port number of our app"
   value       = var.app_port
+}
+
+output "monitoring_config_bucket_name" {
+  description = "S3 Bucket name"
+  value       = aws_s3_bucket.monitoring_config.id
+}
+
+output "monitoring_config_bucket_arn" {
+  description = "S3 Bucket arn"
+  value       = aws_s3_bucket.monitoring_config.arn
+}
+
+output "monitoring_s3_policy_arn" {
+  description = "ARN of the IAM policy for monitoring EC2 S3 access"
+  value       = aws_iam_policy.monitoring_s3.arn
 }

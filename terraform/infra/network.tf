@@ -80,3 +80,10 @@ resource "aws_lb_listener" "front_end" {
     target_group_arn = aws_lb_target_group.alb_target_group.arn
   }
 }
+
+resource "aws_s3_object" "grafana_dashboard" {
+  bucket = data.terraform_remote_state.network.outputs.monitoring_config_bucket_name
+  key    = "grafana/node-exporter.json"
+  source = "./monitoring/grafana/dashboards/node-exporter.json"
+  etag   = filemd5("./monitoring/grafana/dashboards/node-exporter.json")
+}

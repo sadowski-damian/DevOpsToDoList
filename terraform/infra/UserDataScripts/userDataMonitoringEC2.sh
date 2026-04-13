@@ -35,9 +35,7 @@ sudo tee /etc/grafana/provisioning/dashboards/dashboard.yaml > /dev/null << 'EOF
 ${grafana_dashboard_provider}
 EOF
 
-sudo tee /etc/grafana/dashboards/node-exporter.json > /dev/null << 'EOF'
-${grafana_dashboard}
-EOF
+aws s3 cp s3://${monitoring_bucket}/grafana/node-exporter.json /etc/grafana/dashboards/node-exporter.json
 
 # Copy our dockercompose
 sudo tee /home/ec2-user/docker-compose.yaml > /dev/null << 'EOF'
