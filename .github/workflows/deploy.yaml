@@ -264,7 +264,7 @@ jobs:
       - name: Trigger instance refresh
         run: |
           aws autoscaling start-instance-refresh --auto-scaling-group-name main-asg --preferences MinHealthyPercentage=50,InstanceWarmup=300
-          aws autoscaling wait instance-refresh-succeeded --auto-scaling-group-name main-asg
+          until [ "$(aws autoscaling describe-instance-refreshes --auto-scaling-group-name main-asg --query 'InstanceRefreshes[0].Status' --output text)" = "Successful" ]; do sleep 30; done
 
       - name: Wait for ALB health
         run: |
