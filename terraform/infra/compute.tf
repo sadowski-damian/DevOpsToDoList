@@ -7,7 +7,7 @@ resource "aws_launch_template" "ec2_launch_template" {
     name = aws_iam_instance_profile.ec2_instance_profile.name
   }
 
-  image_id      = data.aws_ami.amazon_linux_2023.id
+  image_id      = data.aws_ssm_parameter.al2023_ami.value
   instance_type = var.instance_type
 
   network_interfaces {
@@ -43,7 +43,7 @@ resource "aws_autoscaling_group" "main_asg" {
 }
 
 resource "aws_instance" "ec2_monitoring_instance" {
-  ami                    = data.aws_ami.amazon_linux_2023.id
+  ami                    = data.aws_ssm_parameter.al2023_ami.value
   instance_type          = var.instance_type
   subnet_id              = data.terraform_remote_state.network.outputs.first_private_subnet_id
   vpc_security_group_ids = [data.terraform_remote_state.network.outputs.monitoring_security_group]
