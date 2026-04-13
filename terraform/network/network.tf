@@ -63,108 +63,114 @@ resource "aws_route_table_association" "public_route_table_association" {
   route_table_id = aws_route_table.public_subnets.id
 }
 
-
-# Configuration of different security groups for our app
-# Outbound of our EC2 instances - we allow for all outbound traffic
-# Inbound to - we allow traffic from port 8080 (in which our app runs) to the same port && security groups of lb and monitoring instance
 resource "aws_security_group" "security_group_ec2" {
   name        = "security_group_ec2"
   description = "Security group rules for ec2"
   vpc_id      = aws_vpc.main.id
-  egress {
-    from_port   = 0
-    to_port     = 0
-    cidr_blocks = ["0.0.0.0/0"]
-    protocol    = "-1"
-  }
-  ingress {
-    from_port       = var.app_port
-    to_port         = var.app_port
-    protocol        = "tcp"
-    security_groups = [aws_security_group.security_group_lb.id, aws_security_group.security_group_monitoring.id]
-  }
-
-  ingress {
-    from_port       = 9100
-    to_port         = 9100
-    protocol        = "tcp"
-    security_groups = [aws_security_group.security_group_monitoring.id]
-  }
 }
 
-# Security group for load balancer
-# Inbound: We allow traffic from http (80) and https (443) from any cidr using tcp
-# Outbound: We allow all trafic out of our load balancer
 resource "aws_security_group" "security_group_lb" {
   name        = "security_group_lb"
   description = "Security group rules for load balancer"
   vpc_id      = aws_vpc.main.id
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    cidr_blocks = ["0.0.0.0/0"]
-    protocol    = "-1"
-  }
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    cidr_blocks = ["0.0.0.0/0"]
-    protocol    = "tcp"
-  }
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    cidr_blocks = ["0.0.0.0/0"]
-    protocol    = "tcp"
-  }
 }
 
-# Security group for our monitoringinstance
-# Inbound: We allow traffic from ports 9090 and to 9090, and from grafana on port 3000 to port 3000
-# Outbound: We allow all trafic out of our monitoring instance
 resource "aws_security_group" "security_group_monitoring" {
   name        = "security_group_monitoring"
   description = "Security group rules for monitoring instance"
   vpc_id      = aws_vpc.main.id
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    cidr_blocks = ["0.0.0.0/0"]
-    protocol    = "-1"
-  }
-
-  ingress {
-    from_port   = 9090
-    to_port     = 9090
-    cidr_blocks = ["10.0.0.0/16"]
-    protocol    = "tcp"
-  }
-
-  ingress {
-    from_port   = 3000
-    to_port     = 3000
-    cidr_blocks = ["10.0.0.0/16"]
-    protocol    = "tcp"
-  }
 }
 
-# Security group for RDS
-# Inbound: We allow traffic from ec2 security group on port 5432
-# Outbound: We allow all trafic out of our rds instance
 resource "aws_security_group" "security_group_rds" {
   name        = "security_group_rds"
   description = "Security group rules for rds"
   vpc_id      = aws_vpc.main.id
+}
 
-  ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.security_group_ec2.id]
-  }
+# EC2 rules - inbound from ALB and monitoring on app port, inbound from monitoring on node exporter port
+resource "aws_vpc_security_group_ingress_rule" "ec2_from_lb" {
+  security_group_id            = aws_security_group.security_group_ec2.id
+  referenced_security_group_id = aws_security_group.security_group_lb.id
+  from_port                    = var.app_port
+  to_port                      = var.app_port
+  ip_protocol                  = "tcp"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "ec2_from_monitoring_app" {
+  security_group_id            = aws_security_group.security_group_ec2.id
+  referenced_security_group_id = aws_security_group.security_group_monitoring.id
+  from_port                    = var.app_port
+  to_port                      = var.app_port
+  ip_protocol                  = "tcp"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "ec2_from_monitoring_node_exporter" {
+  security_group_id            = aws_security_group.security_group_ec2.id
+  referenced_security_group_id = aws_security_group.security_group_monitoring.id
+  from_port                    = 9100
+  to_port                      = 9100
+  ip_protocol                  = "tcp"
+}
+
+resource "aws_vpc_security_group_egress_rule" "ec2_all_outbound" {
+  security_group_id = aws_security_group.security_group_ec2.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
+}
+
+# ALB rules - inbound HTTP and HTTPS from internet
+resource "aws_vpc_security_group_ingress_rule" "lb_http" {
+  security_group_id = aws_security_group.security_group_lb.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 80
+  to_port           = 80
+  ip_protocol       = "tcp"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "lb_https" {
+  security_group_id = aws_security_group.security_group_lb.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+}
+
+resource "aws_vpc_security_group_egress_rule" "lb_all_outbound" {
+  security_group_id = aws_security_group.security_group_lb.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
+}
+
+# Monitoring rules - inbound Prometheus (9090) and Grafana (3000) from within VPC
+resource "aws_vpc_security_group_ingress_rule" "monitoring_prometheus" {
+  security_group_id = aws_security_group.security_group_monitoring.id
+  cidr_ipv4         = "10.0.0.0/16"
+  from_port         = 9090
+  to_port           = 9090
+  ip_protocol       = "tcp"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "monitoring_grafana" {
+  security_group_id = aws_security_group.security_group_monitoring.id
+  cidr_ipv4         = "10.0.0.0/16"
+  from_port         = 3000
+  to_port           = 3000
+  ip_protocol       = "tcp"
+}
+
+resource "aws_vpc_security_group_egress_rule" "monitoring_all_outbound" {
+  security_group_id = aws_security_group.security_group_monitoring.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
+}
+
+# RDS rules - inbound PostgreSQL from EC2 only
+resource "aws_vpc_security_group_ingress_rule" "rds_from_ec2" {
+  security_group_id            = aws_security_group.security_group_rds.id
+  referenced_security_group_id = aws_security_group.security_group_ec2.id
+  from_port                    = 5432
+  to_port                      = 5432
+  ip_protocol                  = "tcp"
 }
 
 resource "aws_db_subnet_group" "db_rds_subnet_group" {
