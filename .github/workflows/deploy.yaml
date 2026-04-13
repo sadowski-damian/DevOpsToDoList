@@ -98,15 +98,9 @@ jobs:
         working-directory: ./terraform/network
         run: terraform init
 
-      - name: Terraform apply if changes
+      - name: Terraform apply
         working-directory: ./terraform/network
-        run: |
-          set +e
-          terraform plan -detailed-exitcode
-          EXIT_CODE=$?
-          set -e
-          if [ $EXIT_CODE -eq 1 ]; then exit 1; fi
-          if [ $EXIT_CODE -eq 2 ]; then terraform apply -auto-approve; fi
+        run: terraform apply -auto-approve
 
   terraform-db-plan:
     name: Terraform plan db
@@ -171,15 +165,9 @@ jobs:
         working-directory: ./terraform/db
         run: terraform init
 
-      - name: Terraform apply if changes
+      - name: Terraform apply
         working-directory: ./terraform/db
-        run: |
-          set +e
-          terraform plan -detailed-exitcode
-          EXIT_CODE=$?
-          set -e
-          if [ $EXIT_CODE -eq 1 ]; then exit 1; fi
-          if [ $EXIT_CODE -eq 2 ]; then terraform apply -auto-approve; fi
+        run: terraform apply -auto-approve
 
   terraform-infra-plan:
     name: Terraform plan infra
@@ -244,15 +232,9 @@ jobs:
         working-directory: ./terraform/infra
         run: terraform init
 
-      - name: Terraform apply if changes
+      - name: Terraform apply
         working-directory: ./terraform/infra
-        run: |
-          set +e
-          terraform plan -detailed-exitcode
-          EXIT_CODE=$?
-          set -e
-          if [ $EXIT_CODE -eq 1 ]; then exit 1; fi
-          if [ $EXIT_CODE -eq 2 ]; then terraform apply -auto-approve; fi
+        run: terraform apply -auto-approve
 
   write-to-db:
     name: Register deploy in DB
