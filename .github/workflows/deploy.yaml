@@ -102,13 +102,11 @@ jobs:
 
       - name: Terraform plan
         working-directory: ./terraform/network
-        id: plan_network
         run: |
           terraform plan -detailed-exitcode >> $GITHUB_ENV
           
       - name: Apply if changes
         working-directory: ./terraform/network
-        id: plan_network
         run: |
           if [ $? -eq 2 ]; then
           terraform apply -auto-approve
