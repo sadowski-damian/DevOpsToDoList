@@ -100,18 +100,20 @@ jobs:
         working-directory: ./terraform/network
         run: terraform init
 
-      - name: Terraform plan
+      - name: Terraform plan and apply if changes
         working-directory: ./terraform/network
         run: |
-          terraform plan -detailed-exitcode >> $GITHUB_ENV
-          
-      - name: Apply if changes
-        working-directory: ./terraform/network
-        run: |
-          if [ $? -eq 2 ]; then
-          terraform apply -auto-approve
+          set +e                                                                                                                                                         
+          terraform plan -detailed-exitcode
+          EXIT_CODE=$?
+          set -e
+          if [ $EXIT_CODE -eq 1 ]; then
+            exit 1
           fi
-
+          if [ $EXIT_CODE -eq 2 ]; then
+            terraform apply -auto-approve
+          fi
+  
   terraform-db-plan:
     name: Terraform plan db
     runs-on: ubuntu-latest
