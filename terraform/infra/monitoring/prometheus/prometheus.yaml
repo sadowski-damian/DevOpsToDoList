@@ -1,9 +1,14 @@
+# Prometheus scrape config
+# Uses EC2 service Discovery - finds instances without hardcoding IP, and its important because ASG instances have dynamic IP that change on every refresh
 scrape_configs:
   - job_name: 'scrape_ec2'
     ec2_sd_configs:
       - region: eu-central-1
-        port: 9100
+        # Node Exporter port 
+        port: 9100 
+        # Prometheus check for new or removed EC2 instances every 30s
         refresh_interval: 30s
+        # We only scrape instances with this tag "EC2-app-instance-ASG" so we dont scrape other instances
         filters:
           - name: tag:Name
             values: ["EC2-app-instance-ASG"]

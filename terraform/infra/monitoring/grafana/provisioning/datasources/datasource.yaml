@@ -1,3 +1,7 @@
+# Grafana datasource provisioning conf
+# Configures Prometheus as datasource
+# we use url: http://prometheus:9090 its Docker container name as hostname and port 
+# isDefault true set Prometheus as default datasource for all dashboards 
 apiVersion: 1
 datasources:
   - name: Prometheus
