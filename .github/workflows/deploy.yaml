@@ -96,6 +96,7 @@ jobs:
     name: Terraform apply network
     runs-on: ubuntu-latest
     if: always() && (needs.terraform-network-plan.outputs.exit-code-network== '2' )
+    environment: network
     needs: terraform-network-plan
     steps:
       - name: Checkout Repo
@@ -183,7 +184,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always() && (needs.terraform-db-plan.outputs.exit-code-db == '2' )
     needs: terraform-db-plan
-    environment: db-apply
+    environment: database
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -270,7 +271,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always() && (needs.terraform-infra-plan.outputs.exit-code-infra == '2' )
     needs: terraform-infra-plan
-    environment: infra-apply
+    environment: infrastructure 
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
