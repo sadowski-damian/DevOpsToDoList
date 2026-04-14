@@ -95,7 +95,7 @@ jobs:
   terraform-network-apply:
     name: Terraform apply network
     runs-on: ubuntu-latest
-    if: ${{ needs.terraform-network-plan.outputs.exit-code-network == 2 }}
+    if: ${{ needs.terraform-network-plan.outputs.exit-code-network == '2' }}
     needs: terraform-network-plan
     steps:
       - name: Checkout Repo
@@ -181,7 +181,7 @@ jobs:
   terraform-db-apply:
     name: Terraform apply db
     runs-on: ubuntu-latest
-    if: ${{ needs.terraform-db-plan.outputs.exit-code-db == 2 }}
+    if: ${{ needs.terraform-db-plan.outputs.exit-code-db == '2' }}
     needs: terraform-db-plan
     environment: db-apply
     steps:
@@ -212,6 +212,7 @@ jobs:
   terraform-infra-plan:
     name: Terraform plan infra
     runs-on: ubuntu-latest
+    if: ${{ needs.terraform-network-apply.result == 'success' || needs.terraform-network-apply.result == 'skipped' }}
     needs: terraform-network-apply
     outputs:
       exit-code-infra: ${{ steps.infra-plan.outputs.exit-code }}
@@ -267,7 +268,7 @@ jobs:
   terraform-infra-apply:
     name: Terraform apply infra
     runs-on: ubuntu-latest
-    if: ${{ needs.terraform-infra-plan.outputs.exit-code-infra == 2 }}
+    if: ${{ needs.terraform-infra-plan.outputs.exit-code-infra == '2' }}
     needs: terraform-infra-plan
     environment: infra-apply
     steps:
