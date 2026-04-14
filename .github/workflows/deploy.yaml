@@ -125,6 +125,7 @@ jobs:
   terraform-db-plan:
     name: Terraform plan db
     runs-on: ubuntu-latest
+    if: ${{ needs.terraform-network-apply.result == 'success' || needs.terraform-network-apply.result == 'skipped' }} 
     needs: terraform-network-apply
     steps:
       - name: Checkout Repo
