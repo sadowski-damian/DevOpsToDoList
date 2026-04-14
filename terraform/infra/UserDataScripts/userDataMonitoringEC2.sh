@@ -36,7 +36,7 @@ ${grafana_dashboard_provider}
 EOF
 
 aws s3 cp s3://${monitoring_bucket}/grafana/node-exporter.json /etc/grafana/dashboards/node-exporter.json
-sed -i 's/\${DS_PROMETHEUS}/prometheus/g' /etc/grafana/dashboards/node-exporter.json
+sed -i 's/$${DS_PROMETHEUS}/prometheus/g' /etc/grafana/dashboards/node-exporter.json
 
 # Copy our dockercompose
 sudo tee /home/ec2-user/docker-compose.yaml > /dev/null << 'EOF'
