@@ -77,7 +77,7 @@ jobs:
         id: network-plan
         run: |
           set +e                                                                                                                                                   
-          terraform plan -input=false 2>&1 | tee /tmp/tfplan_network.txt                                                                                           
+          terraform plan -input=false -no-color 2>&1 | tee /tmp/tfplan_network.txt                                                                                           
           plan_exit=${PIPESTATUS[0]}                                                                                                                               
           set -e                        
           if [ $plan_exit -eq 1 ]; then                                                                                                                            
@@ -163,7 +163,7 @@ jobs:
         id: db-plan
         run: |
           set +e                                                                                                                                                 
-          terraform plan -input=false 2>&1 | tee /tmp/tfplan_db.txt
+          terraform plan -input=false -no-color 2>&1 | tee /tmp/tfplan_db.txt
           plan_exit=${PIPESTATUS[0]}        
           set -e                        
           if [ $plan_exit -eq 1 ]; then
@@ -250,7 +250,7 @@ jobs:
         id: infra-plan
         run: |
           set +e
-          terraform plan -input=false 2>&1 | tee /tmp/tfplan_infra.txt
+          terraform plan -input=false -no-color 2>&1 | tee /tmp/tfplan_infra.txt
           plan_exit=${PIPESTATUS[0]}        
           set -e                        
           if [ $plan_exit -eq 1 ]; then
