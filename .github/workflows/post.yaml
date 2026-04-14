@@ -1,0 +1,52 @@
+name: Post Commit data into DB
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  build:
+    name: Register commit in DB
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ vars.TF_VERSION }}
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Terraform init
+        working-directory: ./terraform/infra
+        run: terraform init
+
+      - name: Post commit
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          COMMIT_TS: ${{ github.event.head_commit.timestamp }}
+        run: |
+          ALB_DNS=$(terraform -chdir=./terraform/infra output -raw alb_dns_name)
+          API_KEY=$(aws ssm get-parameter --name "/prod/api-key" --query "Parameter.Value" --output text --with-decryption)
+          DANE=$(jq -n \
+            --arg sha "${{ github.sha }}" \
+            --arg author "${{ github.actor }}" \
+            --arg message "$COMMIT_MSG" \
+            --arg ts "$COMMIT_TS" \
+            '{commitSha: $sha, author: $author, message: $message, committedAt: $ts}')
+          curl -sf -X POST "http://$ALB_DNS/deploys" \
+            -H "X-Api-Key: $API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$DANE"
