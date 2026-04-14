@@ -71,11 +71,27 @@ jobs:
 
       - name: Terraform plan
         working-directory: ./terraform/network
-        run: terraform plan
+        id: network-plan
+        run: |
+          set +e
+          terraform plan -detailed-exitcode -input=false -out=tfplan
+          exit_code=$?
+          set -e
+          if [ $exit_code -eq 2 ]; then
+            echo "There are pending changes."
+            exit 0
+          elif [ $exit_code -eq 0 ]; then
+            echo "No changes detected in the Terraform plan."
+            exit 0
+          else
+            echo "Terraform plan failed."
+            exit 1
+          fi
 
   terraform-network-apply:
     name: Terraform apply network
     runs-on: ubuntu-latest
+    if: steps.network-plan.outcome == 'success'
     needs: terraform-network-plan
     steps:
       - name: Checkout Repo
@@ -236,8 +252,8 @@ jobs:
         working-directory: ./terraform/infra
         run: terraform apply -auto-approve
 
-  write-to-db:
-    name: Register deploy in DB
+  instance-refresh:
+    name: Instance refresh
     runs-on: ubuntu-latest
     needs: [terraform-network-apply, terraform-db-apply, terraform-infra-apply]
     steps:
@@ -251,36 +267,5 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
-        with:
-          terraform_version: ${{ vars.TF_VERSION }}
-          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
-
-      - name: Terraform init
-        working-directory: ./terraform/infra
-        run: terraform init
-
       - name: Trigger instance refresh
-        run: |
-          aws autoscaling start-instance-refresh --auto-scaling-group-name main-asg --preferences MinHealthyPercentage=50,InstanceWarmup=300
-          until [ "$(aws autoscaling describe-instance-refreshes --auto-scaling-group-name main-asg --query 'InstanceRefreshes[0].Status' --output text)" = "Successful" ]; do sleep 30; done
-
-      - name: Wait for ALB health
-        run: |
-          ALB_DNS=$(terraform -chdir=./terraform/infra output -raw alb_dns_name)
-          for ((i=0; i<10; i++)); do
-            curl -sf "http://$ALB_DNS/health" && break
-            echo "Attempt $i/10, retrying in 15s..."
-            sleep 15
-          done
-          curl -sf "http://$ALB_DNS/health" || exit 1
-
-      - name: Register Deployment in DB
-        run: |
-          ALB_DNS=$(terraform -chdir=./terraform/infra output -raw alb_dns_name)
-          API_KEY=$(aws ssm get-parameter --name "/prod/api-key" --query "Parameter.Value" --output text --with-decryption)
-          curl -X POST "http://$ALB_DNS/deploys" \
-            -H "X-Api-Key: $API_KEY" \
-            -H "Content-Type: application/json" \
-            -d "{\"commitSha\":\"${{ github.sha }}\",\"author\":\"${{ github.actor }}\",\"message\":\"${{ github.event.head_commit.message }}\",\"committedAt\":\"${{ github.event.head_commit.timestamp }}\"}"
+        run: aws autoscaling start-instance-refresh --auto-scaling-group-name main-asg --preferences MinHealthyPercentage=50,InstanceWarmup=300
