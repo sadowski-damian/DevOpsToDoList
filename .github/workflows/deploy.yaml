@@ -250,7 +250,7 @@ jobs:
         id: infra-plan
         run: |
           set +e
-          terraform plan -detailed-exitcode -input=false -out=tfplan
+          terraform plan -detailed-exitcode -input=false
           exit_code=$?
           echo "exit-code-infra=$exit_code" >> "$GITHUB_OUTPUT"
           set -e
