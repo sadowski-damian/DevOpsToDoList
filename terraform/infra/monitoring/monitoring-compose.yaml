@@ -18,8 +18,10 @@ services:
     volumes:
       # Same as with prometheus 
       - grafana_data:/var/lib/grafana
-      # Mounts datasource and dashboard provides configs from host 
+      # Mounts datasource and dashboard provides configs from host
       - /etc/grafana/provisioning:/etc/grafana/provisioning
+      # Mounts dashboard JSON files downloaded from S3
+      - /etc/grafana/dashboards:/etc/grafana/dashboards
     # Prometheus has to be up before grafana
     depends_on:
       - prometheus
