@@ -40,6 +40,8 @@ jobs:
     name: Terraform plan network
     runs-on: ubuntu-latest
     needs: build
+    outputs:
+      exit-code: ${{ steps.network-plan.outputs.exit-code }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -68,7 +70,8 @@ jobs:
       - name: Terraform validate
         working-directory: ./terraform/network
         run: terraform validate
-
+      
+      # An exit code of 0 indicated no changes, 1 a terraform failure, 2 there are pending changes.
       - name: Terraform plan
         working-directory: ./terraform/network
         id: network-plan
@@ -76,6 +79,7 @@ jobs:
           set +e
           terraform plan -detailed-exitcode -input=false -out=tfplan
           exit_code=$?
+          echo "exit-code=$exit_code" >> "$GITHUB_OUTPUT"
           set -e
           if [ $exit_code -eq 2 ]; then
             echo "There are pending changes."
@@ -91,7 +95,7 @@ jobs:
   terraform-network-apply:
     name: Terraform apply network
     runs-on: ubuntu-latest
-    if: steps.network-plan.outcome == 'success'
+    if: ${{ needs.terraform-network-plan.outputs.exit-code == 2 }}
     needs: terraform-network-plan
     steps:
       - name: Checkout Repo
