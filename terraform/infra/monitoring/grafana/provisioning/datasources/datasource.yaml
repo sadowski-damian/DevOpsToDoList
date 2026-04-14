@@ -8,4 +8,5 @@ datasources:
     type: prometheus
     url: http://prometheus:9090
     isDefault: true
+    uid: prometheus
   
