@@ -77,9 +77,9 @@ jobs:
         id: network-plan
         run: |
           set +e
-          terraform plan -detailed-exitcode -input=false -out=tfplan
+          terraform plan -detailed-exitcode -input=false
           exit_code=$?
-          echo "exit-code=$exit_code" >> "$GITHUB_OUTPUT"
+          echo "exit-code-network=$exit_code" >> "$GITHUB_OUTPUT"
           set -e
           if [ $exit_code -eq 2 ]; then
             echo "There are pending changes."
@@ -163,9 +163,9 @@ jobs:
         id: db-plan
         run: |
           set +e
-          terraform plan -detailed-exitcode -input=false -out=tfplan
+          terraform plan -detailed-exitcode -input=false
           exit_code=$?
-          echo "exit-code=$exit_code" >> "$GITHUB_OUTPUT"
+          echo "exit-code-db=$exit_code" >> "$GITHUB_OUTPUT"
           set -e
           if [ $exit_code -eq 2 ]; then
             echo "There are pending changes."
@@ -252,7 +252,7 @@ jobs:
           set +e
           terraform plan -detailed-exitcode -input=false -out=tfplan
           exit_code=$?
-          echo "exit-code=$exit_code" >> "$GITHUB_OUTPUT"
+          echo "exit-code-infra=$exit_code" >> "$GITHUB_OUTPUT"
           set -e
           if [ $exit_code -eq 2 ]; then
           echo "There are pending changes."
