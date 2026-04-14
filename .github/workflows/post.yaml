@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   build:
-    name: Register commit in DB
+    name: Register commit into Database
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
