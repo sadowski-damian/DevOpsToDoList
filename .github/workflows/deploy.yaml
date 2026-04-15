@@ -83,17 +83,20 @@ jobs:
       uses: aquasecurity/tfsec-action@v1.0.0
       with:
         working_directory: ./terraform/network
-
+        additional_args: "--minimum-severity HIGH"
+    
     - name: Scan - database
       uses: aquasecurity/tfsec-action@v1.0.0
       with:
         working_directory: ./terraform/db
-
+        additional_args: "--minimum-severity HIGH"
+    
     - name: Scan - infrastructure 
       uses: aquasecurity/tfsec-action@v1.0.0
       with:
         working_directory: ./terraform/infra
-
+        additional_args: "--minimum-severity HIGH"
+    
     - name: Post text to a Slack channel
       uses: slackapi/slack-github-action@v3.0.1
       if: failure()
