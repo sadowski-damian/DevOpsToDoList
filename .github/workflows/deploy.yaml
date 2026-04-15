@@ -27,7 +27,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push to GHCR
+      - name: Build image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./src
+          push: false
+          load: true
+          tags: ghcr.io/${{ github.repository_owner }}/app:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+            
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@0.33.1
+        with: 
+          image-ref: ghcr.io/${{ github.repository_owner }}/app:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
+            
+      - name: Push image to GHCR
         uses: docker/build-push-action@v4
         with:
           context: ./src
@@ -35,7 +54,16 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/app:${{ github.sha }}
             ghcr.io/${{ github.repository_owner }}/app:latest
-
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Notify Slack on failure
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_COLOR: 'failure'
+      
   terraform-network-plan:
     name: Network - Plan
     runs-on: ubuntu-latest
@@ -90,7 +118,14 @@ jobs:
           else
             echo "exit-code-network=0" >> "$GITHUB_OUTPUT"                                                                                                         
             echo "No changes detected in the Terraform plan."
-          fi 
+          fi
+          
+      - name: Notify Slack on failure
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_COLOR: 'failure'
 
   terraform-network-apply:
     name: Network - Apply
@@ -122,6 +157,13 @@ jobs:
       - name: Terraform apply
         working-directory: ./terraform/network
         run: terraform apply -auto-approve
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_COLOR: 'failure'
 
   terraform-db-plan:
     name: Database - Plan
@@ -177,7 +219,14 @@ jobs:
           else
             echo "exit-code-db=0" >> "$GITHUB_OUTPUT"                                                                                                              
             echo "No changes detected in the Terraform plan."
-          fi 
+          fi
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_COLOR: 'failure'
 
   terraform-db-apply:
     name: Database - Apply
@@ -209,6 +258,13 @@ jobs:
       - name: Terraform apply
         working-directory: ./terraform/db
         run: terraform apply -auto-approve
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_COLOR: 'failure'
 
   terraform-infra-plan:
     name: Infrastructure - Plan
@@ -265,6 +321,13 @@ jobs:
             echo "exit-code-infra=0" >> "$GITHUB_OUTPUT"                                                                                                           
             echo "No changes detected in the Terraform plan."
           fi 
+          
+      - name: Notify Slack on failure
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_COLOR: 'failure'
 
   terraform-infra-apply:
     name: Infrastructure - Apply
@@ -297,6 +360,13 @@ jobs:
         working-directory: ./terraform/infra
         run: terraform apply -auto-approve
 
+      - name: Notify Slack on failure
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_COLOR: 'failure'
+
   instance-refresh:
     name: Refresh Instances 
     runs-on: ubuntu-latest
@@ -319,3 +389,10 @@ jobs:
 
       - name: Trigger instance refresh
         run: aws autoscaling start-instance-refresh --auto-scaling-group-name main-asg --preferences MinHealthyPercentage=50,InstanceWarmup=300
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_COLOR: 'failure'
