@@ -66,6 +66,7 @@ jobs:
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_BOT_TOKEN }}
+          errors: true
           payload: |
             channel: ${{ secrets.SLACK_CHANNEL_ID }}
             text: "*Build & Push Image* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
@@ -165,6 +166,7 @@ jobs:
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_BOT_TOKEN }}
+          errors: true
           payload: |
             channel: ${{ secrets.SLACK_CHANNEL_ID }}
             text: "*Network - Plan* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
@@ -207,6 +209,7 @@ jobs:
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_BOT_TOKEN }}
+          errors: true
           payload: |
             channel: ${{ secrets.SLACK_CHANNEL_ID }}
             text: "*Network - Apply* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
@@ -274,6 +277,7 @@ jobs:
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_BOT_TOKEN }}
+          errors: true
           payload: |
             channel: ${{ secrets.SLACK_CHANNEL_ID }}
             text: "*Database - plan* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
@@ -316,6 +320,7 @@ jobs:
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_BOT_TOKEN }}
+          errors: true
           payload: |
             channel: ${{ secrets.SLACK_CHANNEL_ID }}
             text: "*Database - apply* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
@@ -383,6 +388,7 @@ jobs:
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_BOT_TOKEN }}
+          errors: true
           payload: |
             channel: ${{ secrets.SLACK_CHANNEL_ID }}
             text: "*Infrastructure - plan* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
@@ -425,6 +431,7 @@ jobs:
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_BOT_TOKEN }}
+          errors: true
           payload: |
             channel: ${{ secrets.SLACK_CHANNEL_ID }}
             text: "*Infrastructure - Apply* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
@@ -459,6 +466,7 @@ jobs:
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_BOT_TOKEN }}
+          errors: true
           payload: |
             channel: ${{ secrets.SLACK_CHANNEL_ID }}
             text: "*Refresh Instances* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
