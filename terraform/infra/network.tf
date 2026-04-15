@@ -37,12 +37,14 @@ resource "aws_route_table_association" "private_route_table_association" {
 # Create application load balancer so we can spread traffic between our ec2 instances
 # We deploy alb in our public subnets
 # Also we enabled cross_zone_load_balancing which will result in more efficient traffic spreading
+#tfsec:ignore:aws-elb-alb-not-public
 resource "aws_lb" "main_alb" {
   name                             = "main-alb"
   load_balancer_type               = "application"
   security_groups                  = [data.terraform_remote_state.network.outputs.lb_security_group]
   subnets                          = [data.terraform_remote_state.network.outputs.first_public_subnet_id, data.terraform_remote_state.network.outputs.second_public_subnet_id]
   enable_cross_zone_load_balancing = true
+  drop_invalid_header_fields       = true
 
   tags = {
     Name = "main-alb"
@@ -70,6 +72,8 @@ resource "aws_lb_target_group" "alb_target_group" {
 
 # Create listener for alb
 # Listener catches incoming traffic from the internet and forwards it to our target group
+# HTTP is used because no SSL certificate is configured for this learning project
+#tfsec:ignore:aws-elb-http-not-used
 resource "aws_lb_listener" "front_end" {
   load_balancer_arn = aws_lb.main_alb.arn
   port              = "80"

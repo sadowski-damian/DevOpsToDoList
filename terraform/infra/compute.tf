@@ -17,6 +17,10 @@ resource "aws_launch_template" "ec2_launch_template" {
 
   user_data = filebase64("./UserDataScripts/userDataAppEC2.sh")
 
+  metadata_options {
+    http_tokens = "required"
+  }
+
   tag_specifications {
     resource_type = "instance"
     tags = {
@@ -57,6 +61,14 @@ resource "aws_instance" "ec2_monitoring_instance" {
   }))
 
   iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile_monitoring.name
+
+  metadata_options {
+    http_tokens = "required"
+  }
+
+  root_block_device {
+    encrypted = true
+  }
 
   tags = {
     Name = "EC2-monitoring-instance"
