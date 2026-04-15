@@ -59,13 +59,16 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/app:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      
-      - name: Notify Slack on failure
+
+      - name: Post text to a Slack channel
+        uses: slackapi/slack-github-action@v3.0.1
         if: failure()
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_COLOR: 'failure'
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            channel: ${{ secrets.SLACK_CHANNEL_ID }}
+            text: "*Build & Push Image* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
   
   terraform-sec-scan:
     name: Terraform - Security Scan
@@ -90,13 +93,15 @@ jobs:
       with:
         working_directory: ./terraform/infra
 
-    - name: Notify Slack on failure
+    - name: Post text to a Slack channel
+      uses: slackapi/slack-github-action@v3.0.1
       if: failure()
-      uses: rtCamp/action-slack-notify@v2
-      env:
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-        SLACK_COLOR: 'failure'
-  
+      with:
+        method: chat.postMessage
+        token: ${{ secrets.SLACK_BOT_TOKEN }}
+        payload: |
+          channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          text: "*Terraform - security scan* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
   
   terraform-network-plan:
     name: Network - Plan
@@ -154,13 +159,17 @@ jobs:
             echo "No changes detected in the Terraform plan."
           fi
           
-      - name: Notify Slack on failure
+      - name: Post text to a Slack channel
+        uses: slackapi/slack-github-action@v3.0.1
         if: failure()
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_COLOR: 'failure'
-
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            channel: ${{ secrets.SLACK_CHANNEL_ID }}
+            text: "*Network - Plan* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+  
+  
   terraform-network-apply:
     name: Network - Apply
     runs-on: ubuntu-latest
@@ -192,13 +201,17 @@ jobs:
         working-directory: ./terraform/network
         run: terraform apply -auto-approve
 
-      - name: Notify Slack on failure
+      - name: Post text to a Slack channel
+        uses: slackapi/slack-github-action@v3.0.1
         if: failure()
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_COLOR: 'failure'
-
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            channel: ${{ secrets.SLACK_CHANNEL_ID }}
+            text: "*Network - Apply* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+  
+  
   terraform-db-plan:
     name: Database - Plan
     runs-on: ubuntu-latest
@@ -255,13 +268,17 @@ jobs:
             echo "No changes detected in the Terraform plan."
           fi
 
-      - name: Notify Slack on failure
+      - name: Post text to a Slack channel
+        uses: slackapi/slack-github-action@v3.0.1
         if: failure()
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_COLOR: 'failure'
-
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            channel: ${{ secrets.SLACK_CHANNEL_ID }}
+            text: "*Database - plan* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+  
+  
   terraform-db-apply:
     name: Database - Apply
     runs-on: ubuntu-latest
@@ -293,13 +310,17 @@ jobs:
         working-directory: ./terraform/db
         run: terraform apply -auto-approve
 
-      - name: Notify Slack on failure
+      - name: Post text to a Slack channel
+        uses: slackapi/slack-github-action@v3.0.1
         if: failure()
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_COLOR: 'failure'
-
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            channel: ${{ secrets.SLACK_CHANNEL_ID }}
+            text: "*Database - apply* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+  
+  
   terraform-infra-plan:
     name: Infrastructure - Plan
     runs-on: ubuntu-latest
@@ -356,13 +377,17 @@ jobs:
             echo "No changes detected in the Terraform plan."
           fi 
           
-      - name: Notify Slack on failure
+      - name: Post text to a Slack channel
+        uses: slackapi/slack-github-action@v3.0.1
         if: failure()
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_COLOR: 'failure'
-
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            channel: ${{ secrets.SLACK_CHANNEL_ID }}
+            text: "*Infrastructure - plan* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+  
+  
   terraform-infra-apply:
     name: Infrastructure - Apply
     runs-on: ubuntu-latest
@@ -394,13 +419,17 @@ jobs:
         working-directory: ./terraform/infra
         run: terraform apply -auto-approve
 
-      - name: Notify Slack on failure
+      - name: Post text to a Slack channel
+        uses: slackapi/slack-github-action@v3.0.1
         if: failure()
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_COLOR: 'failure'
-
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            channel: ${{ secrets.SLACK_CHANNEL_ID }}
+            text: "*Infrastructure - Apply* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+  
+  
   instance-refresh:
     name: Refresh Instances 
     runs-on: ubuntu-latest
@@ -424,9 +453,13 @@ jobs:
       - name: Trigger instance refresh
         run: aws autoscaling start-instance-refresh --auto-scaling-group-name main-asg --preferences MinHealthyPercentage=50,InstanceWarmup=300
 
-      - name: Notify Slack on failure
+      - name: Post text to a Slack channel
+        uses: slackapi/slack-github-action@v3.0.1
         if: failure()
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_COLOR: 'failure'
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            channel: ${{ secrets.SLACK_CHANNEL_ID }}
+            text: "*Refresh Instances* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+  

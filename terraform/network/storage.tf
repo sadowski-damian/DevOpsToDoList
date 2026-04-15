@@ -1,7 +1,11 @@
+#tfsec:ignore:aws-s3-enable-bucket-encryption
+# encryption configured 
 resource "aws_s3_bucket" "monitoring_config" {
   bucket = "wenttoprod-monitoring-config"
 }
 
+#tfsec:ignore:aws-s3-encryption-customer-key 
+# AES256 os enough
 resource "aws_s3_bucket_server_side_encryption_configuration" "s3_encryption" {
   bucket = aws_s3_bucket.monitoring_config.id
   
