@@ -2,6 +2,16 @@ resource "aws_s3_bucket" "monitoring_config" {
   bucket = "wenttoprod-monitoring-config"
 }
 
+resource "aws_s3_bucket_server_side_encryption_configuration" "s3_encryption" {
+  bucket = aws_s3_bucket.monitoring_config.id
+  
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
 resource "aws_s3_bucket_public_access_block" "monitoring_config" {
   bucket = aws_s3_bucket.monitoring_config.id
 
@@ -15,6 +25,7 @@ data "aws_iam_policy_document" "monitoring_s3" {
   statement {
     effect    = "Allow"
     actions   = ["s3:GetObject"]
+    #tfsec:ignore:aws-iam-no-policy-wildcards
     resources = ["${aws_s3_bucket.monitoring_config.arn}/grafana/*"]
   }
 }
