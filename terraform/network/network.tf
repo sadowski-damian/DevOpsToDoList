@@ -181,3 +181,30 @@ resource "aws_db_subnet_group" "db_rds_subnet_group" {
     Name = "RDS subnet group"
   }
 }
+
+resource "aws_route53_zone" "main" {
+  name = "damiansadowski.cloud"
+}
+
+resource "aws_acm_certificate" "cert" {
+  domain_name       = "*.damiansadowski.cloud"
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_route53_record" "site_cert_dns" {
+  allow_overwrite = true
+  name            = tolist(aws_acm_certificate.cert.domain_validation_options)[0].resource_record_name
+  records         = [tolist(aws_acm_certificate.cert.domain_validation_options)[0].resource_record_value]
+  type            = tolist(aws_acm_certificate.cert.domain_validation_options)[0].resource_record_type
+  zone_id         = aws_route53_zone.main.id
+  ttl             = 60
+}
+
+resource "aws_acm_certificate_validation" "site_cert_validation" {
+  certificate_arn         = aws_acm_certificate.cert.arn
+  validation_record_fqdns = [aws_route53_record.site_cert_dns.fqdn]
+}

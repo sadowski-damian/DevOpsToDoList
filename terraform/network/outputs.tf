@@ -67,3 +67,13 @@ output "monitoring_s3_policy_arn" {
   description = "ARN of the IAM policy for monitoring EC2 S3 access"
   value       = aws_iam_policy.monitoring_s3.arn
 }
+
+output "acm_certificate_arn" {
+  description = "Arn of our ACM certificate"
+  value       = aws_acm_certificate_validation.site_cert_validation.certificate_arn
+}
+
+output "route_53_zone_id" {
+  description = "ID of our route 53 hosted zone"
+  value       = aws_route53_zone.main.id
+}
