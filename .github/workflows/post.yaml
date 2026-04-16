@@ -23,22 +23,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
-        with:
-          terraform_version: ${{ vars.TF_VERSION }}
-          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
-
-      - name: Terraform init
-        working-directory: ./terraform/infra
-        run: terraform init
-
       - name: Post commit
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
           COMMIT_TS: ${{ github.event.head_commit.timestamp }}
         run: |
-          ALB_DNS=$(terraform -chdir=./terraform/infra output -raw alb_dns_name)
           API_KEY=$(aws ssm get-parameter --name "/prod/api-key" --query "Parameter.Value" --output text --with-decryption)
           DANE=$(jq -n \
             --arg sha "${{ github.sha }}" \
@@ -46,7 +35,7 @@ jobs:
             --arg message "$COMMIT_MSG" \
             --arg ts "$COMMIT_TS" \
             '{commitSha: $sha, author: $author, message: $message, committedAt: $ts}')
-          curl -sf -X POST "http://$ALB_DNS/deploys" \
+          curl -sf -X POST "https://wenttoprod.damiansadowski.cloud/deploys" \
             -H "X-Api-Key: $API_KEY" \
             -H "Content-Type: application/json" \
             -d "$DANE"
