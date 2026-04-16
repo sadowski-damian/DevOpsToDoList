@@ -161,7 +161,7 @@ resource "aws_wafv2_web_acl" "alb_waf" {
   }
 
   rule {
-    name     = "Rate-based rule"
+    name     = "RateBasedrule"
     priority = 1
 
     action {
