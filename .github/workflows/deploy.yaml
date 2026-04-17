@@ -466,11 +466,10 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Post commit
-        env:
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
-          COMMIT_TS: ${{ github.event.head_commit.timestamp }}
         run: |
           API_KEY=$(aws ssm get-parameter --name "/prod/api-key" --query "Parameter.Value" --output text --with-decryption)
+          COMMIT_MSG=$(git log -1 --pretty=format:'%s' ${{ github.sha }})
+          COMMIT_TS=$(git log -1 --pretty=format:'%cI' ${{ github.sha }})
           DANE=$(jq -n \
             --arg sha "${{ github.sha }}" \
             --arg author "${{ github.actor }}" \
