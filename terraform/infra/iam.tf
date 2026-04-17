@@ -1,4 +1,3 @@
-
 resource "aws_iam_role" "ec2_role" {
   name               = "ec2-role"
   path               = "/"
@@ -21,7 +20,6 @@ resource "aws_iam_role_policy_attachment" "ec2_role_policy_ssm" {
   role       = aws_iam_role.ec2_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
-
 
 resource "aws_iam_role" "ec2_role_monitoring" {
   name               = "ec2-role-monitoring"
@@ -54,4 +52,4 @@ resource "aws_iam_role_policy" "monitoring_ssm_params" {
 resource "aws_iam_role_policy_attachment" "monitoring_s3" {
   role       = aws_iam_role.ec2_role_monitoring.name
   policy_arn = data.terraform_remote_state.network.outputs.monitoring_s3_policy_arn
-} 
+}

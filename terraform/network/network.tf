@@ -141,23 +141,6 @@ resource "aws_vpc_security_group_egress_rule" "lb_all_outbound" {
   ip_protocol       = "-1"
 }
 
-# Monitoring rules - inbound Prometheus (9090) and Grafana (3000) from within VPC
-resource "aws_vpc_security_group_ingress_rule" "monitoring_prometheus" {
-  security_group_id = aws_security_group.security_group_monitoring.id
-  cidr_ipv4         = "10.0.0.0/16"
-  from_port         = 9090
-  to_port           = 9090
-  ip_protocol       = "tcp"
-}
-
-resource "aws_vpc_security_group_ingress_rule" "monitoring_grafana" {
-  security_group_id = aws_security_group.security_group_monitoring.id
-  cidr_ipv4         = "10.0.0.0/16"
-  from_port         = 3000
-  to_port           = 3000
-  ip_protocol       = "tcp"
-}
-
 resource "aws_vpc_security_group_egress_rule" "monitoring_all_outbound" {
   security_group_id = aws_security_group.security_group_monitoring.id
   cidr_ipv4         = "0.0.0.0/0"
@@ -207,4 +190,65 @@ resource "aws_route53_record" "site_cert_dns" {
 resource "aws_acm_certificate_validation" "site_cert_validation" {
   certificate_arn         = aws_acm_certificate.cert.arn
   validation_record_fqdns = [aws_route53_record.site_cert_dns.fqdn]
+}
+
+resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
+  name              = "VPC-FlowLogs"
+  retention_in_days = 30
+}
+
+data "aws_iam_policy_document" "vpc_flow_logs_assume" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["vpc-flow-logs.amazonaws.com"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "vpc_flow_logs_policy" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+      "logs:DescribeLogGroups",
+      "logs:DescribeLogStreams"
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role" "vpc_flow_logs" {
+  name               = "vpc-flow-logs-role"
+  assume_role_policy = data.aws_iam_policy_document.vpc_flow_logs_assume.json
+}
+
+resource "aws_iam_role_policy" "vpc_flow_logs" {
+  name   = "vpc-flow-logs-policy"
+  role   = aws_iam_role.vpc_flow_logs.id
+  policy = data.aws_iam_policy_document.vpc_flow_logs_policy.json
+}
+
+resource "aws_flow_log" "main" {
+  vpc_id          = aws_vpc.main.id
+  traffic_type    = "ALL"
+  iam_role_arn    = aws_iam_role.vpc_flow_logs.arn
+  log_destination = aws_cloudwatch_log_group.vpc_flow_logs.arn
+}
+
+resource "aws_guardduty_detector" "main" {
+  enable = true
+}
+
+resource "aws_cloudtrail" "main" {
+  name                          = "main-trail"
+  s3_bucket_name                = aws_s3_bucket.monitoring_config.id
+  s3_key_prefix                 = "cloudtrail"
+  include_global_service_events = true
+  is_multi_region_trail         = false
+  enable_log_file_validation    = true
 }

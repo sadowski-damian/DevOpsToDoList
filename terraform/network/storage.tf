@@ -1,10 +1,10 @@
-# encryption configured 
+# encryption configured
 #tfsec:ignore:aws-s3-enable-bucket-encryption
 resource "aws_s3_bucket" "monitoring_config" {
-  bucket = "wenttoprod-monitoring-config"
+  bucket        = "wenttoprod-monitoring-config"
 }
 
-# AES256 os enough
+# AES256 is enough
 #tfsec:ignore:aws-s3-encryption-customer-key
 resource "aws_s3_bucket_server_side_encryption_configuration" "s3_encryption" {
   bucket = aws_s3_bucket.monitoring_config.id
@@ -23,6 +23,48 @@ resource "aws_s3_bucket_public_access_block" "monitoring_config" {
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
+}
+
+data "aws_iam_policy_document" "logs_bucket_policy" {
+  statement {
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["logdelivery.elasticloadbalancing.amazonaws.com"]
+    }
+    actions   = ["s3:PutObject"]
+    resources = ["${aws_s3_bucket.monitoring_config.arn}/alb-logs/*"]
+  }
+
+  statement {
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["cloudtrail.amazonaws.com"]
+    }
+    actions   = ["s3:GetBucketAcl"]
+    resources = [aws_s3_bucket.monitoring_config.arn]
+  }
+
+  statement {
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["cloudtrail.amazonaws.com"]
+    }
+    actions   = ["s3:PutObject"]
+    resources = ["${aws_s3_bucket.monitoring_config.arn}/cloudtrail/AWSLogs/${data.aws_caller_identity.current.account_id}/*"]
+    condition {
+      test     = "StringEquals"
+      variable = "s3:x-amz-acl"
+      values   = ["bucket-owner-full-control"]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "logs_bucket_policy" {
+  bucket = aws_s3_bucket.monitoring_config.id
+  policy = data.aws_iam_policy_document.logs_bucket_policy.json
 }
 
 data "aws_iam_policy_document" "monitoring_s3" {
