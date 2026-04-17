@@ -218,7 +218,10 @@ data "aws_iam_policy_document" "vpc_flow_logs_policy" {
       "logs:DescribeLogGroups",
       "logs:DescribeLogStreams"
     ]
-    resources = ["*"]
+    resources = [
+      aws_cloudwatch_log_group.vpc_flow_logs.arn,
+      "${aws_cloudwatch_log_group.vpc_flow_logs.arn}:*"
+    ]
   }
 }
 
@@ -244,6 +247,38 @@ resource "aws_guardduty_detector" "main" {
   enable = true
 }
 
+resource "aws_kms_key" "cloudtrail" {
+  description             = "KMS key for CloudTrail"
+  deletion_window_in_days = 7
+}
+
+resource "aws_kms_key_policy" "cloudtrail" {
+  key_id = aws_kms_key.cloudtrail.id
+  policy = data.aws_iam_policy_document.cloudtrail_kms.json
+}
+
+data "aws_iam_policy_document" "cloudtrail_kms" {
+  statement {
+    effect    = "Allow"
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+    actions   = ["kms:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    effect    = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["cloudtrail.amazonaws.com"]
+    }
+    actions   = ["kms:GenerateDataKey*", "kms:DescribeKey"]
+    resources = ["*"]
+  }
+}
+
 resource "aws_cloudtrail" "main" {
   name                          = "main-trail"
   s3_bucket_name                = aws_s3_bucket.monitoring_config.id
@@ -251,4 +286,5 @@ resource "aws_cloudtrail" "main" {
   include_global_service_events = true
   is_multi_region_trail         = false
   enable_log_file_validation    = true
+  kms_key_id                    = aws_kms_key.cloudtrail.arn
 }
