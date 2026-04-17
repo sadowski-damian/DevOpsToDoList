@@ -31,6 +31,14 @@ data "aws_iam_policy_document" "monitoring_ec2_discovery" {
   }
 }
 
+data "aws_iam_policy_document" "monitoring_ssm_params" {
+  statement {
+    effect    = "Allow"
+    actions   = ["ssm:GetParameter"]
+    resources = ["arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/prod/slack-webhook-url"]
+  }
+}
+
 data "aws_ssm_parameter" "al2023_ami" {
   name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
 }

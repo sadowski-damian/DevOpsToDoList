@@ -54,6 +54,8 @@ resource "aws_instance" "ec2_monitoring_instance" {
   vpc_security_group_ids = [data.terraform_remote_state.network.outputs.monitoring_security_group]
   user_data_base64 = base64encode(templatefile("./UserDataScripts/userDataMonitoringEC2.sh", {
     prometheus_config          = file("./monitoring/prometheus/prometheus.yaml")
+    prometheus_rules           = file("./monitoring/prometheus/rules.yaml")
+    alertmanager_config        = file("./monitoring/alertmanager/alertmanager.yaml")
     grafana_datasource         = file("./monitoring/grafana/provisioning/datasources/datasource.yaml")
     grafana_dashboard_provider = file("./monitoring/grafana/provisioning/dashboards/dashboard.yaml")
     docker_compose             = file("./monitoring/monitoring-compose.yaml")

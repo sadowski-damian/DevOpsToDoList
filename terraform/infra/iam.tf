@@ -45,6 +45,12 @@ resource "aws_iam_role_policy" "monitoring_ec2_discovery" {
   policy = data.aws_iam_policy_document.monitoring_ec2_discovery.json
 }
 
+resource "aws_iam_role_policy" "monitoring_ssm_params" {
+  name   = "monitoring-ssm-params"
+  role   = aws_iam_role.ec2_role_monitoring.id
+  policy = data.aws_iam_policy_document.monitoring_ssm_params.json
+}
+
 resource "aws_iam_role_policy_attachment" "monitoring_s3" {
   role       = aws_iam_role.ec2_role_monitoring.name
   policy_arn = data.terraform_remote_state.network.outputs.monitoring_s3_policy_arn

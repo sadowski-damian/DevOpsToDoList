@@ -1,3 +1,10 @@
+rule_files:
+  - /etc/prometheus/rules.yaml
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - 'alertmanager:9093'
 # Prometheus scrape config
 # Uses EC2 service Discovery - finds instances without hardcoding IP, and its important because ASG instances have dynamic IP that change on every refresh
 scrape_configs:

@@ -22,6 +22,17 @@ sudo tee /etc/prometheus/prometheus.yml > /dev/null << 'EOF'
 ${prometheus_config}
 EOF
 
+sudo tee /etc/prometheus/rules.yaml > /dev/null << 'EOF'
+${prometheus_rules}
+EOF
+
+SLACK_WEBHOOK=$(aws ssm get-parameter --name "/prod/slack-webhook-url" --query "Parameter.Value" --output text --with-decryption)
+
+sudo mkdir -p /etc/alertmanager
+sudo tee /etc/alertmanager/alertmanager.yaml > /dev/null << EOF
+${alertmanager_config}
+EOF
+
 # Same as with prometheus we create directories so we can pass our configuration files
 sudo mkdir -p /etc/grafana/provisioning/datasources
 sudo mkdir -p /etc/grafana/provisioning/dashboards

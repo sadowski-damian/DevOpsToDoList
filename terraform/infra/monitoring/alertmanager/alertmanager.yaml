@@ -1,0 +1,13 @@
+global:
+  slack_api_url: "$SLACK_WEBHOOK"
+
+route:
+  receiver: "slack-notifications"
+  group_by: [alertname]
+
+receivers:
+- name: "slack-notifications"
+  slack_configs:
+  - channel: "#monitoring-notify"
+    send_resolved: true
+    text: "{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}"
