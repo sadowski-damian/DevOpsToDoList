@@ -1,4 +1,4 @@
-# WentToProd - Praktyczny projekt DevOps: CI/CD, IaC i Monitoring na AWS
+# WentToProd — DevOps na AWS: CI/CD, IaC i Monitoring
 
 ![AWS](https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)
 ![Terraform](https://img.shields.io/badge/terraform-%235835CC.svg?style=for-the-badge&logo=terraform&logoColor=white)
@@ -8,108 +8,158 @@
 ![Grafana](https://img.shields.io/badge/grafana-%23F46800.svg?style=for-the-badge&logo=grafana&logoColor=white)
 ![.NET](https://img.shields.io/badge/.NET-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
 
-> **WentToProd** to projekt DevOps demonstrujący pełny cykl życia oprogramowania - od Commita do działającej aplikacji na AWS. Projekt kładzie nacisk na bezpieczeństwo, optymalizację kosztów i automatyzację całego procesu wdrożenia.
+> Projekt pokazuje pełny cykl życia aplikacji — 
+> od Commita do działającej aplikacji na AWS. 
+> Każdy push na main przez pipeline: 
+> budowanie obrazu, skanowanie bezpieczeństwa, provisioning infrastruktury i zero-downtime deployment. 
+> Historia każdego deployu trafia do bazy danych i jest widoczna na stronie.
 
 ---
 
-## Spis Treści
-1. [Architektura i zarządzanie kosztami](#architektura-i-zarządzanie-kosztami)
-2. [Kluczowe Funkcjonalności](#kluczowe-funkcjonalności)
-3. [Stack Technologiczny](#stack-technologiczny)
-4. [Proces CI/CD](#proces-cicd)
-5. [Monitoring i Observability](#monitoring-i-observability)
-6. [Instrukcja Uruchomienia](#instrukcja-uruchomienia)
-
----
-
-## Architektura i zarządzanie kosztami
+## Architektura i Zarządzanie kosztami 
 
 ![Diagram Architektury AWS](./docs/infra.png)
 
-Infrastruktura została zaprojektowana z myślą o optymalizacji kosztów. Terraform podzielony jest na 3 workspace używające Terraform HCP, co pozwala wyłączać najdroższe zasoby (NAT Gateway, ALB, EC2) gdy aplikacja nie jest używana - bez niszczenia danych ani konfiguracji sieci.
+Infrastruktura jest podzielona na **3 workspaces Terraform HCP**, 
+co pozwala niszczyć kosztowne zasoby i pozostawiać te które nie generują kosztów skracając czas działania pipeline.
 
-| Workspace   | Kiedy uruchamiany?     | Co w nim jest?                                      |
-|-------------|------------------------|-----------------------------------------------------|
-| **network** | Zawsze uruchomiony     | VPC, Subnets, Internet Gateway, Security Groups     |
-| **db**      | Zawsze uruchomiony     | RDS PostgreSQL - przechowuje historię deployów      |
-| **infra**   | Uruchamiany na żądanie | ALB, ASG, EC2 (aplikacja + monitoring), NAT Gateway |
+| Workspace   | Zawartość                                                     | Kiedy działa? |
+|-------------|---------------------------------------------------------------|---------------|
+| **network** | VPC, Subnety, Internet Gateway, Security Groups, Route53, ACM | Zawsze        |
+| **db**      | RDS PostgreSQL Multi-AZ                                       | Zawsze        |
+| **infra**   | ALB, ASG, EC2, NAT Gateway, WAF, Monitoring                   | Na żądanie    |
 
-Warstwę infra można zniszczyć jednym poleceniem **terraform destroy** lub używając pipeline poprzez workflow_dispatch **destroy.yaml** w GitHub Actions redukując koszty do minimum, a następnie postawić ponownie w kilka minut. Dane w bazie oraz wszystkie potrzebne zasoby sieciowe pozostają nienaruszone ponieważ tylko **Infra** jest niszczona.
-
----
-
-## Kluczowe Funkcjonalności
-
-* **Bezpieczneństwo:** Instancje (EC2) z aplikacją oraz jedna służąca do monitoringu wraz z bazą danych (RDS) są odizolowane w prywatnych podsieciach bez publicznych adresów IP. Cały ruch z internetu przechodzi wyłącznie przez Application Load Balancer.
-
-* **Automatyczne skalowanie i Naprawa:** ASG utrzymuje 2 działające instancje (min. 1, desired. 2, max. 4). Gdy ALB Health Check wykryje awarię, automatycznie zastępuje instancję nową - skrypt **userDataAppEC2.sh** pobiera wtedy obraz z GHCR, odczytuje sekrety z SSM Parameter Store i uruchamia aplikację.
-
-* **Zarządzanie Sekretami:** Żadne hasła ani tokeny nie są przechowywane w kodzie ani zmiennych środowiskowych pipeline. Credentials do bazy danych, GHCR i klucz API są przechowywane w AWS SSM Parameter Store jako SecureString (szyfrowane KMS) i pobierane przez instancje EC2.
-
-* **IaC podzielony na 3 workspace:** Terraform podzielony jest na 3 workspace (network → db → infra), oprócz benefitów związanych z kosztami pozwala nam to zapewnić, że zmiana w warstwie compute nie może przypadkowo zmodyfikować sieci ani bazy danych.
-
-* **Ciągłość działania:** Jeśli warstwa **infra** nie była niszczona, pipeline triggeruje **aws autoscaling start-instance-refresh** co sprawia że ASG płynnie wymienia stare instancje na nowe z najnowszym obrazem Dockera, zachowując ciągłość działania aplikacji.
-
-* **Automatyczna Rejestracja Wdrożeń:** Po każdym udanym deployu pipeline wysyła POST na endpoint **/deploys** aplikacji (przez ALB DNS), rejestrując SHA commita, autora i czas w bazie PostgreSQL. Request zabezpieczony kluczem API z SSM.
+Infrastruktura z workspace `infra` jest **automatycznie niszczona codziennie o 22:30 UTC** - Workspace `network` oraz `db` pozostają.
+Takie rozwiązanie pozwala zminimalizować koszty jednocześnie zapewniając szybsze wdrożenie aplikacji usuwając potrzebę tworzenia infrastruktury która nie generuje kosztów.
 
 ---
 
-## Stack Technologiczny
+## Stack technologiczny
 
-| Kategoria          | Technologia                                                                |
-|--------------------|----------------------------------------------------------------------------| 
-| **Chmura**         | AWS - VPC, EC2, ALB, ASG, RDS PostgreSQL, NAT Gateway, SSM Parameter Store |
-| **IaC**            | Terraform + HCP Terraform Cloud (3 workspace'y)                            |
-| **CI/CD**          | GitHub Actions - multi-stage pipeline, manual approvals, instance refresh  |
-| **Konteneryzacja** | Docker (multi-stage build), GitHub Container Registry (GHCR)               |
-| **Monitoring**     | Prometheus (EC2 Service Discovery), Node Exporter, Grafana                 |
-| **Skrypty**        | Bash (User Data scripts, bootstrap SSM, port forwarding)                   |
-| **Aplikacja**      | C# / .NET 8 + PostgreSQL (Npgsql)                                          |
-
----
-
-## Proces CI/CD
-
-Pipeline w GitHub Actions uruchamia się automatycznie przy każdym pushu na brancha **main** jeżeli powstały zmiany w kodzie aplikacji **/src**. Można go też uruchomić ręcznie przez **workflow_dispatch**.
-
-**Etapy pipeline'u:**
-
-1. **Build & Push** - Obraz Dockera jest budowany i publikowany do GHCR z tagiem SHA commita oraz **latest**.
-
-2. **Terraform Plan** - Dla każdej warstwy (**network** → **db** → **infra**) wykonywany jest **terraform plan**. Każda warstwa działa niezależnie - jeśli nie ma zmian, jej joby są automatycznie pomijane.
-
-3. **Manual Approval** - Jeśli **terraform plan** wykryje zmiany w danej warstwie, pipeline tworzy GitHub Issue i czeka na ręczne zatwierdzenie przed wykonaniem **apply**. Brak zmian = brak approval = brak apply.
-
-4. **Terraform Apply** - Wykonywany tylko po zatwierdzeniu. Aplikuje dokładnie ten plan który był wcześniej zatwierdzony.
-
-5. **Uruchomienie aplikacji** - Zależy od tego co się zmieniło:
-    - **Infra była niszczona i tworzona od nowa** → pipeline czeka aż ALB health check zwróci 200 (nowe instancje potrzebują czasu na start)
-    - **Tylko kod aplikacji się zmienił** → pipeline triggeruje **instance refresh** - ASG płynnie wymienia instancje na nowe z najnowszym obrazem, zero downtime
-    - **Żadna warstwa nie miała zmian** → ten etap jest pomijany
-
-6. **Register Deploy** - Pipeline wysyła POST na **/deploys** z danymi commita (SHA, autor, wiadomość, czas). Klucz API pobierany z SSM.
+| Kategoria      | Technologie                                                           |
+|----------------|-----------------------------------------------------------------------|
+| Chmura         | AWS: VPC, EC2, ALB, ASG, RDS, NAT Gateway, SSM, ACM, Route53, WAF, S3 |
+| IaC            | Terraform + HCP Terraform Cloud (3 workspace'y)                       |
+| CI/CD          | GitHub Actions — multi-stage pipeline z manual approvals              |
+| Konteneryzacja | Docker (multi-stage build) + GitHub Container Registry                |
+| Bezpieczeństwo | AWS WAF, tfsec, Trivy, SSM SecureString                               |
+| Monitoring     | Prometheus + Grafana + Alertmanager                                   |
 
 ---
 
-## Monitoring i Observability
+## Jak działa pipeline
 
-Instancja monitoringu (EC2 w prywatnej podsieci) uruchamia Prometheus i Grafana jako kontenery Docker.
+Każdy push do `main` zmieniający pliki w `/src` uruchamia automatycznie:
 
-* **Node Exporter** - uruchomiony na każdej instancji EC2 w ASG, zbiera metryki systemu operacyjnego (CPU, RAM, disk, network) i udostępnia je na porcie **9100**.
+TUTAJ DIAGRAM DODAC
 
-* **Prometheus** - używa EC2 Service Discovery. Zamiast hardkodować adresy IP (które zmieniają się przy każdym instance refresh), automatycznie wykrywa instancje ASG po tagu **EC2-app-instance-ASG** i odpytuje je co 30 sekund.
+**Szczegółowo:**
+1. **Build & Push Image** — obraz Dockera jest budowany -> Skanowanie obrazu używając Triva -> Push obrazu z tagiem SHA commita i `latest` do GHCR.
+2. **Terraform - Security Scan** — Sprawdzanie infrastruktury Terraforma pod kątem bezpieczeństwa.
+3. **Terraform Plan** — dla każdej warstwy wykonywany jest plan.
+4. **Terraform Apply** — Jeżeli Terraform Plan zwróciło brak zmian, pomijamy ten krok. Gdy są zmiany oczekujemy na zatwierdzenie przez GitHub Environments -> Terraform Apply
+5. **Register Commit into DB** — POST na `/deploys` rejestruje SHA, autora i czas w PostgreSQL
+7. **Instance Refresh** — ASG płynnie wymienia instancje na nowe z najnowszym obrazem (`MinHealthyPercentage=50`), zero downtime.
 
-* **Grafana** - prezentuje metryki z Node Exporter na preinstalowanym dashboardzie. Datasource Prometheus skonfigurowany automatycznie przez provisioning.
+Każdy błąd na dowolnym etapie → powiadomienie na Slack.
 
-**Dostęp do Grafany**:
+---
+
+## Bezpieczeństwo
+
+- **AWS WAF** podpięty pod ALB — blokuje OWASP Top 10 (SQL injection, XSS, path traversal) przez AWS Managed Rules + rate limiting 1000 req/5min
+- **TLS wszędzie** — certyfikat wildcard z ACM, HTTP automatycznie przekierowywany na HTTPS
+- **IMDSv2** wymuszone na wszystkich EC2 (`http_tokens = required`)
+- **Szyfrowanie** — RDS encrypted, S3 SSE-AES256, SSM SecureString z KMS
+- **Least privilege IAM** — osobne role dla EC2 aplikacyjnych i monitoringu, każda z uprawnieniami tylko do potrzebnych zasobów
+- **Izolacja sieciowa** — EC2 i RDS w prywatnych podsieciach, dostęp z internetu tylko przez ALB
+- **RDS Multi-AZ** — synchroniczna replika, automatyczny failover, backup 7 dni
+
+---
+
+## Monitoring i alerty
+
+Dedykowana instancja monitoringu w prywatnej podsieci uruchamia Prometheus, Grafana i Alertmanager jako kontenery używając Docker Compose.
+
+- **Node Exporter** na każdej instancji ASG zbiera metryki systemowe (CPU, RAM, dysk, sieć)
+- **Prometheus** używa EC2 Service Discovery — automatycznie wykrywa instancje po tagu aby Instancje które zostały wymienione przez ASG również były widoczne
+- **Grafana** prezentuje metryki na preinstalowanym dashboardzie Node Exporter
+- **Alertmanager** wysyła powiadomienia na Slack gdy:
+  - instancja przestaje odpowiadać (`InstanceDown` — po 1 minucie)
+  - CPU przekracza 80% przez 5 minut (`HighCPU`)
+  - wolne miejsce na dysku spada poniżej 20% (`HighDisk`)
+
+**Dostęp do Grafany** (przez SSM port forwarding, bez otwierania portów publicznych):
 ```bash
 ./scripts/grafana-forward.sh
 # Grafana dostępna pod http://localhost:3000
 ```
+
 ---
 
-### Niszczenie infrastruktury
+## Zarządzanie kosztami
 
-Warstwa **infra** jest niszczona automatycznie codziennie o **22:30 UTC** przez **destroy.yaml**. Można też uruchomić ręcznie przez **workflow_dispatch**.
+| Zasób                                                  | Koszt/mies (przybliżony) |
+|--------------------------------------------------------|--------------------------|
+| RDS Multi-AZ (db.t3.micro)                             | ~$30                     |
+| NAT Gateway × 2                                        | ~$64                     |
+| EC2 × 3 (t3.micro)                                     | ~$25                     |
+| ALB                                                    | ~$16                     |
+| S3, Route53, misc                                      | ~$5                      |
+| **Łącznie gdy infra działa**                           | **~$140**                |
+| **Łącznie gdy infra zniszczona** (tylko RDS + network) | **~$35**                 |
 
-Warstwy **network** i **db** pozostają.
+Warstwa `infra` niszczona codziennie o 22:30 UTC redukuje koszty o ~75%.
+
+---
+
+## Uruchomienie od zera
+
+### Wymagania
+- AWS CLI z dostępem do konta (`aws configure`)
+- Terraform CLI
+- Konto HCP Terraform z 3 workspace'ami: `wenttoprod-network`, `wenttoprod-db`, `wenttoprod-infra`
+
+### 1. Sekrety w GitHub Actions
+
+W ustawieniach repozytorium → Settings → Secrets dodaj:
+
+| Secret             | Opis                                    |
+|--------------------|-----------------------------------------|
+| `AWS_KEY`          | AWS Access Key ID                       |
+| `AWS_SECRET`       | AWS Secret Access Key                   |
+| `AWS_REGION`       | Region (np. `eu-central-1`)             |
+| `TF_API_TOKEN`     | Token HCP Terraform                     |
+| `SLACK_BOT_TOKEN`  | Token bota Slack                        |
+| `SLACK_CHANNEL_ID` | ID kanału Slack do powiadomień pipeline |
+
+W Settings → Variables dodaj:
+
+| Variable     | Opis                           |
+|--------------|--------------------------------|
+| `TF_VERSION` | Wersja Terraform (np. `1.9.0`) |
+
+### 2. Parametry w SSM Parameter Store
+
+Uruchom skrypt bootstrap — tworzy wszystkie wymagane parametry jako SecureString:
+
+```bash
+./scripts/bootstrap-ssm.sh <ghcr-login> <ghcr-password> <api-key> <slack-incoming-webhook-url>
+```
+
+Terraform automatycznie doda `/prod/db-connection-string` przy pierwszym `apply` na workspace `db`.
+
+### 3. Wdrożenie infrastruktury
+
+```bash
+# Warstwa sieciowa — jednorazowo
+cd terraform/network && terraform init && terraform apply
+
+# Baza danych — jednorazowo
+cd terraform/db && terraform init && terraform apply
+
+# Infrastruktura aplikacyjna
+cd terraform/infra && terraform init && terraform apply
+```
+
+Lub push na `main` ze zmianami w `/src` — pipeline zrobi to automatycznie.
