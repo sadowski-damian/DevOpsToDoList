@@ -1,9 +1,9 @@
 # Creating Elastic IPs for our Both NAT gateways
-resource "aws_eip" "elastic_ip_nat_gateway-first" {
+resource "aws_eip" "elastic_ip_nat_gateway_first" {
   domain = "vpc"
 }
 
-resource "aws_eip" "elastic_ip_nat_gateway-second" {
+resource "aws_eip" "elastic_ip_nat_gateway_second" {
   domain = "vpc"
 }
 
@@ -11,7 +11,7 @@ resource "aws_eip" "elastic_ip_nat_gateway-second" {
 # Creating a NAT Gateway in a both public subnets so our private subnets have outbound internet connection
 resource "aws_nat_gateway" "nat_gateway_first" {
   subnet_id     = data.terraform_remote_state.network.outputs.first_public_subnet_id
-  allocation_id = aws_eip.elastic_ip_nat_gateway-first.id
+  allocation_id = aws_eip.elastic_ip_nat_gateway_first.id
 
   tags = {
     Name = "nat-gateway-first"
@@ -20,7 +20,7 @@ resource "aws_nat_gateway" "nat_gateway_first" {
 
 resource "aws_nat_gateway" "nat_gateway_second" {
   subnet_id     = data.terraform_remote_state.network.outputs.second_public_subnet_id
-  allocation_id = aws_eip.elastic_ip_nat_gateway-second.id
+  allocation_id = aws_eip.elastic_ip_nat_gateway_second.id
 
   tags = {
     Name = "nat-gateway-second"
@@ -76,6 +76,12 @@ resource "aws_lb" "main_alb" {
   subnets                          = [data.terraform_remote_state.network.outputs.first_public_subnet_id, data.terraform_remote_state.network.outputs.second_public_subnet_id]
   enable_cross_zone_load_balancing = true
   drop_invalid_header_fields       = true
+
+  access_logs {
+    enabled = true
+    bucket  = data.terraform_remote_state.network.outputs.monitoring_config_bucket_name
+    prefix  = "alb-logs"
+  }
 
   tags = {
     Name = "main-alb"
