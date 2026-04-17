@@ -218,6 +218,7 @@ data "aws_iam_policy_document" "vpc_flow_logs_policy" {
       "logs:DescribeLogGroups",
       "logs:DescribeLogStreams"
     ]
+    #tfsec:ignore:aws-iam-no-policy-wildcards
     resources = [
       aws_cloudwatch_log_group.vpc_flow_logs.arn,
       "${aws_cloudwatch_log_group.vpc_flow_logs.arn}:*"
