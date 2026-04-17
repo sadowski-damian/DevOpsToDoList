@@ -1,5 +1,5 @@
 output "first_public_subnet_id" {
-  description = "ID of our first private subnet"
+  description = "ID of our first public subnet"
   value       = aws_subnet.public_subnet[data.aws_availability_zones.available.names[0]].id
 }
 
