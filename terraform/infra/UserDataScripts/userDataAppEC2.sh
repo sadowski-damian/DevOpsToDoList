@@ -23,7 +23,7 @@ DB_CONN=$(aws ssm get-parameter --name "/prod/db-connection-string" --query "Par
 API_KEY=$(aws ssm get-parameter --name "/prod/api-key" --query "Parameter.Value" --output text --with-decryption)
 
 # Docker run our app
-docker run -d --restart=always -p 8080:8080 -e ConnectionStrings__Postgres="$DB_CONN" -e ApiKey="$API_KEY" ghcr.io/sadowski-damian/app:latest
+docker run -d --restart=always -p 8080:8080 -e ConnectionStrings__Postgres="$DB_CONN" -e ApiKey="$API_KEY" ghcr.io/sadowski-damian/wenttoprod:latest
 
 # Docker run node-exporter for prometheus
 docker run -d --restart=always --pid="host" --net="host" -v "/:/host:ro,rslave" prom/node-exporter --path.rootfs=/host
