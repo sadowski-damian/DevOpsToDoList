@@ -39,7 +39,7 @@ output "monitoring_security_group" {
 }
 
 output "rds_security_group" {
-  description = "ID of lb security group"
+  description = "ID of rds security group"
   value       = aws_security_group.security_group_rds.id
 }
 
