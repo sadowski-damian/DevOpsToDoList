@@ -30,7 +30,7 @@ Infrastruktura z workspace `infra` jest **automatycznie niszczona codziennie o 2
 Takie rozwiązanie pozwala zminimalizować koszty, jednocześnie zapewniając szybkie wdrożenie aplikacji.
 
 <p align="center">
-  <img src="./docs/infra.png" alt="Diagram Architektury AWS" width="800">
+  <img src="./docs/infra.svg" alt="Diagram Architektury AWS" width="800">
 </p>
 
 ---
