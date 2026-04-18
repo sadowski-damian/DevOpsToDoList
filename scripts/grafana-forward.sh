@@ -1,8 +1,8 @@
 #!/bin/bash
 # Creates an SSM port forwarding to the Grafana instance running in a private subnet
 # After running, Grafana will be accessible at this address http://localhost:3000 
-# 1. Prerequirements:
-#  - Configured aws cli in regions eu-central-1 (aws configure)
+# 1. Prerequisites:
+#  - Configured aws cli in region eu-central-1 (aws configure)
 #  - AWS Session Manager plugin installed
 #  - Infra terraform layer deployed (EC2-monitoring-instance has to be running)
 # 2. How to use?
