@@ -6,6 +6,7 @@
 # 2. How to use?
 #  - ./scripts/bootstrap-ssm.sh [ghcr-login] [ghcr-password] [api-key] [slack-webhook-url]
 
+# Stores each value as SecureString (KMS encrypted) in SSM Parameter Store, --overwrite allows updating existing parameters
 aws ssm put-parameter --name "/prod/ghcr-login" --value "$1" --type SecureString --overwrite
 aws ssm put-parameter --name "/prod/ghcr-password" --value "$2" --type SecureString --overwrite
 aws ssm put-parameter --name "/prod/api-key" --value "$3" --type SecureString --overwrite
