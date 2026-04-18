@@ -119,13 +119,13 @@ Dedykowana instancja monitoringu w prywatnej podsieci uruchamia Prometheus, Graf
 </p>
 
 <p align="center">
-  <img src="./docs/notifyprometheus.png" alt="Slack alert z Alertmanagera" width="600">
+  <img src="./docs/notifprometheus.png" alt="Slack alert z Alertmanagera" width="600">
   <br>
   <sub>Powiadomienie Slack wysłane przez Alertmanagera — alert InstanceDown po wykryciu niedostępnej instancji</sub>
 </p>
 
 <p align="center">
-  <img src="./docs/notifypipeline.png" alt="Slack alert z pipeline" width="600">
+  <img src="./docs/notifpipeline.png" alt="Slack alert z pipeline" width="600">
   <br>
   <sub>Powiadomienie Slack o błędzie w pipeline — zawiera nazwę joba, branch, autora</sub>
 </p>
