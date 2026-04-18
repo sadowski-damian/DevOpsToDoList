@@ -1,25 +1,36 @@
 name: Deploy Image and Infrastructure
 on:
+  # We can start our workflow manually by clicking run workflow on GitHub
   workflow_dispatch:
+  # Also our pipeline starts on every push to main branch
+  # paths: - filters triggers so our pipeline runs only when there were changes to src/ on that push
   push:
     branches:
       - main
     paths:
       - 'src/**'
+# Concurrency ensures that multiple instances of the same pipeline don't start simultaneously since it can cause race conditions
 concurrency:
+  # We group by name of our workflow and branch, it looks like this Deploy Image and Infrastructure-refs/heads/main  
   group: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
+  # First job is all about building, checking and pushing our app image into GHCR
   build:
     name: Build & Push Image
     runs-on: ubuntu-latest
+    # We need to give permisions to our build job, packages: write ensures that we can push image onto GHCR.
+    # Also since we are using permissions we need to add contents: read which is default value if there are no permissions block specified
+    # permissions block - sets permissions that we specified and every other permission is set to none.
     permissions:
       packages: write
       contents: read
     steps:
+      # Checkout Repo clones our repository into workflow's runner so future steps have access to our code
       - name: Checkout Repo
         uses: actions/checkout@v4
 
+      # Log in to GHCR, we are passing password as a secret from GitHub secrets.
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2.2.0
         with:
@@ -27,58 +38,78 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           
+      # Setting up Buildx, since standard docker build doesn't support cache
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3    
 
+      # Build image from /src folder (that's where our Dockerfile is located)
       - name: Build image
         uses: docker/build-push-action@v4
         with:
           context: ./src
+          # We don't push right away because we want to run Trivy scan first
           push: false
+          # But we are loading it into our local Docker so Trivy can scan it
           load: true
           tags: ghcr.io/${{ github.repository_owner }}/wenttoprod:${{ github.sha }}
+          # We are using cache so our build phase is faster, and also caching our current build. 
           cache-from: type=gha
           cache-to: type=gha,mode=max
-            
+      
+      # Running Trivy scan 
       - name: Run Trivy vulnerability scan
         uses: aquasecurity/trivy-action@v0.35.0
         with: 
+          # We are using image that we built in the previous step, selecting it by tag that we added
           image-ref: ghcr.io/${{ github.repository_owner }}/wenttoprod:${{ github.sha }}
+          # Result will be shown in a table format
           format: table
+          # If we find any vulnerability we exit with code 1, which fails the whole job
           exit-code: '1'
+          # We are scanning only for High and Critical vulnerabilities, skipping Low and Medium
           severity: 'HIGH,CRITICAL'
+          # Ignore all vulnerabilities that don't have a patch yet.
           ignore-unfixed: true
             
+      # After a successful Trivy scan, we build and push to GHCR
       - name: Push image to GHCR
         uses: docker/build-push-action@v4
         with:
           context: ./src
           push: true
+          # Add tag latest so our EC2 instances can get the newest image version
           tags: |
             ghcr.io/${{ github.repository_owner }}/wenttoprod:${{ github.sha }}
             ghcr.io/${{ github.repository_owner }}/wenttoprod:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # If job fails, we post a message into a Slack Channel with meaningful information so someone can take care of it 
       - name: Post text to a Slack channel
         uses: slackapi/slack-github-action@v3.0.1
         if: failure()
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_BOT_TOKEN }}
+          # If Slack API returns an error, the job also fails
           errors: true
+          # Message content
+          # github.repository - repo full name, github.ref_name - branch name, github.actor - account name of person who triggered pipeline, github.run_id - unique pipeline run ID.
           payload: |
             channel: ${{ secrets.SLACK_CHANNEL_ID }}
             text: "*Build & Push Image* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
-  
+
+  # tfsec ensures that our cloud infrastructure is secure
   terraform-sec-scan:
     name: Terraform - Security Scan
     runs-on: ubuntu-latest
+    # This job only runs when build job is successful 
     needs: build
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
-
+    
+    # 3 steps below do the following: scan each workspace directory for known vulnerabilities, fails on HIGH/CRITICAL, and passes on LOW/MEDIUM
     - name: Scan - network
       uses: aquasecurity/tfsec-action@v1.0.0
       with:
@@ -108,45 +139,60 @@ jobs:
           channel: ${{ secrets.SLACK_CHANNEL_ID }}
           text: "*Terraform - security scan* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
   
+  # Both workspaces: infra and db need network workspace to be running.
   terraform-network-plan:
     name: Network - Plan
     runs-on: ubuntu-latest
+    # This job only runs when tfsec scan passed
     needs: terraform-sec-scan
+    # We output the exit code which we will use in the next jobs to skip them based on if there are changes to be made in the cloud or not
     outputs:
       exit-code-network: ${{ steps.network-plan.outputs.exit-code-network }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
+      # Since Runner is a new clean Ubuntu, we need to configure credentials so our future commands can authenticate to AWS
       - name: AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET }}
           aws-region: ${{ secrets.AWS_REGION }}
-
+      
+      # Installing Terraform on the runner with version provided in GitHub variable, also passing HCP Terraform token (where state is located)
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: ${{ vars.TF_VERSION }}
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
+      # Init workspace - download providers and configure remote backend (HCP Terraform)
       - name: Terraform init
         working-directory: ./terraform/network
         run: terraform init
 
+      # Check if terraform resource files are formatted, if not = fail
       - name: Terraform format check
         working-directory: ./terraform/network
         run: terraform fmt -check
 
+      # Validates that syntax and internal consistency are correct
       - name: Terraform validate
         working-directory: ./terraform/network
         run: terraform validate
       
-      # An exit code of 0 indicated no changes, 1 a terraform failure, 2 there are pending changes.
+      # Terraform plan, so we can see what changes have to be made so our terraform configuration matches resources deployed in the cloud
+      # An exit code of 0 indicates no changes, 1 a terraform failure, 2 there are pending changes.
       - name: Terraform plan
         working-directory: ./terraform/network
+        # Gives this step an ID so other jobs can reference its outputs
         id: network-plan
+        # Running multiple commands (pipe)
+        # set +e disables automatic exit on error
+        # runs plan, merges stderr into stdout, saves output to a temp file and prints it to logs. 
+        # ${PIPESTATUS[0]} captures exit code of terraform plan, not tee
+        # Next simple if's and setting exit-code to determine if apply job should run or be skipped
         run: |
           set +e                                                                                                                                                   
           terraform plan -input=false -no-color 2>&1 | tee /tmp/tfplan_network.txt                                                                                           
@@ -179,8 +225,11 @@ jobs:
   terraform-network-apply:
     name: Network - Apply
     runs-on: ubuntu-latest
+    # always() means run even if previous jobs were skipped, but the second condition makes it only run when network plan has changes to be made.
     if: always() && (needs.terraform-network-plan.outputs.exit-code-network== '2' )
+    # References GitHub environment named network which has manual approval configured, if this job isn't skipped someone has to approve it to run.
     environment: network
+    # This job needs network-plan to be successful 
     needs: terraform-network-plan
     steps:
       - name: Checkout Repo
@@ -203,6 +252,7 @@ jobs:
         working-directory: ./terraform/network
         run: terraform init
 
+      # Applies changes without the need for confirmation (only safe here because someone approved it via GitHub environments)
       - name: Terraform apply
         working-directory: ./terraform/network
         run: terraform apply -auto-approve
@@ -445,11 +495,14 @@ jobs:
           payload: |
             channel: ${{ secrets.SLACK_CHANNEL_ID }}
             text: "*Infrastructure - Apply* failed | Repo: ${{ github.repository }} | Branch: ${{ github.ref_name }} | Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
-
+  
+  # Job for posting commit into rds db 
   post:
     name: Register commit into Database
     runs-on: ubuntu-latest
+    # Needs all workspaces to be up in order to execute
     needs: [terraform-network-apply, terraform-db-apply, terraform-infra-apply]
+    # This condition allows this job to work even if jobs were skipped (means that there were no changes to be made)
     if: |
       always() &&
       (needs.terraform-infra-apply.result == 'success' || needs.terraform-infra-apply.result == 'skipped') &&
@@ -466,17 +519,17 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      # First we need to fetch API Key from the SSM Parameter Store (it's SecureString, so we need --with-decryption)
+      # COMMIT_* gets commit information
+      # jq -n builds JSON from the variables.
+      # curl -sf -X POST sends POST request to /deploys endpoint, -s - silent, -f - fail with exit code
+      # -H "X-Api-Key" authenticates the request using fetched API key
       - name: Post commit
         run: |
           API_KEY=$(aws ssm get-parameter --name "/prod/api-key" --query "Parameter.Value" --output text --with-decryption)
           COMMIT_MSG=$(git log -1 --pretty=format:'%s' ${{ github.sha }})
           COMMIT_TS=$(git log -1 --pretty=format:'%cI' ${{ github.sha }})
-          DANE=$(jq -n \
-            --arg sha "${{ github.sha }}" \
-            --arg author "${{ github.actor }}" \
-            --arg message "$COMMIT_MSG" \
-            --arg ts "$COMMIT_TS" \
-            '{commitSha: $sha, author: $author, message: $message, committedAt: $ts}')
+          DANE=$(jq -n --arg sha "${{ github.sha }}" --arg author "${{ github.actor }}" --arg message "$COMMIT_MSG" --arg ts "$COMMIT_TS" '{commitSha: $sha, author: $author, message: $message, committedAt: $ts}')
           curl -sf -X POST "https://wenttoprod.damiansadowski.cloud/deploys" \
             -H "X-Api-Key: $API_KEY" \
             -H "Content-Type: application/json" \
@@ -501,7 +554,10 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET }}
           aws-region: ${{ secrets.AWS_REGION }}
-
+      
+      # Since we pushed a new image version to GHCR, we need our EC2 instances to use the new image
+      # start-instance-refresh tells ASG to start swapping instances, MinHealthyPercentage - min. 50% of instances have to be up and healthy
+      # InstanceWarmup - waits 300 seconds after new instance starts before it marks it as healthy.
       - name: Trigger instance refresh
         run: aws autoscaling start-instance-refresh --auto-scaling-group-name main-asg --preferences MinHealthyPercentage=50,InstanceWarmup=300
 
