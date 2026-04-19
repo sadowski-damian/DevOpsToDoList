@@ -1,21 +1,30 @@
+# Prometheus configuration file - defines what to scrape and where to send alerts
+# This file is written to /etc/prometheus/prometheus.yml by the user data script and mounted into the Prometheus container
+
+# rule_files - tells Prometheus where to find alert rules, when a rule condition is met it starts an alert to Alertmanager
 rule_files:
   - /etc/prometheus/rules.yaml
+
+# alerting - defines where Prometheus should send fired alerts
+# we use the Docker container name "alertmanager" as hostname because all containers share the same Docker network
 alerting:
   alertmanagers:
     - static_configs:
         - targets:
             - 'alertmanager:9093'
-# Prometheus scrape config
-# Uses EC2 service Discovery - finds instances without hardcoding IP, and its important because ASG instances have dynamic IP that change on every refresh
+
 scrape_configs:
   - job_name: 'scrape_ec2'
+    # EC2 service discovery - Prometheus calls the AWS API to find instances instead of us hardcoding IPs
+    # This is critical because ASG replaces instances regularly and each new instance gets a different private IP
+    # The IAM role attached to the monitoring instance gives it permission to call ec2:DescribeInstances
     ec2_sd_configs:
       - region: eu-central-1
-        # Node Exporter port 
-        port: 9100 
-        # Prometheus check for new or removed EC2 instances every 30s
+        # Port where Node Exporter is running on each app EC2 instance
+        port: 9100
+        # Prometheus refreshes the list of instances every 30 seconds to detect new or terminated instances
         refresh_interval: 30s
-        # We only scrape instances with this tag "EC2-app-instance-ASG" so we dont scrape other instances
+        # Only scrape instances tagged with this name - filters out the monitoring instance itself and any other EC2s
         filters:
           - name: tag:Name
             values: ["EC2-app-instance-ASG"]

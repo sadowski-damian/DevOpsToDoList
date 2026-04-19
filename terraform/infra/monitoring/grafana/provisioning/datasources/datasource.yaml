@@ -1,12 +1,15 @@
-# Grafana datasource provisioning conf
-# Configures Prometheus as datasource
-# we use url: http://prometheus:9090 its Docker container name as hostname and port 
-# isDefault true set Prometheus as default datasource for all dashboards 
+# Grafana datasource provisioning config - Grafana reads this file on startup and automatically configures the datasource
+# This file is written to /etc/grafana/provisioning/datasources/ by the user data script and mounted into the Grafana container
+# Without this file we would have to manually add the datasource through the Grafana UI every time the instance starts
+
 apiVersion: 1
 datasources:
   - name: Prometheus
     type: prometheus
+    # We use the Docker container name "prometheus" as the hostname because both containers share the same Docker network
     url: http://prometheus:9090
+    # isDefault - all dashboards use this datasource automatically unless they specify a different one
     isDefault: true
+    # uid - unique identifier used by dashboard JSON files to reference this datasource
+    # the node-exporter dashboard JSON references "prometheus" uid so it connects to this datasource automatically
     uid: prometheus
-  

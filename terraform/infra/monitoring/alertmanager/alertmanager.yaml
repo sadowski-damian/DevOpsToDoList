@@ -1,13 +1,24 @@
+# Alertmanager configuration - defines how to handle alerts received from Prometheus and where to send them
+# This file is written to /etc/alertmanager/alertmanager.yaml by the user data script
+# The $SLACK_WEBHOOK placeholder is replaced with the real URL fetched from SSM Parameter Store before the file is written
+
+# global - settings shared across all receivers
+# slack_api_url - the Slack incoming webhook URL
 global:
   slack_api_url: "$SLACK_WEBHOOK"
 
+# route - defines how incoming alerts are grouped and which receiver handles them
+# group_by alertname - alerts with the same name are grouped into a single Slack message instead of spamming one per instance
 route:
   receiver: "slack-notifications"
   group_by: [alertname]
 
+# receivers - defines where alerts are actually sent
 receivers:
 - name: "slack-notifications"
   slack_configs:
   - channel: "#monitoring-notify"
+    # send_resolved true - Alertmanager also sends a message when the alert stops firing so we know the issue is fixed
     send_resolved: true
+    # text - the message body, we loop over all alerts in the group and print their summary annotation
     text: "{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}"
