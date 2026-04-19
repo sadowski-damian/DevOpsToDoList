@@ -1,2 +1,3 @@
+# Force github to detect .yaml and .yml files in repository language stats
 *.yaml linguist-language=YAML linguist-detectable=true
 *.yml linguist-language=YAML linguist-detectable=true
