@@ -147,3 +147,17 @@ Dedykowana instancja monitoringu w prywatnej podsieci uruchamia Prometheus, Graf
 Warstwa `infra` niszczona codziennie o 22:30 UTC.
 
 ---
+
+## Wymagania wstępne
+
+Do uruchomienia projektu potrzebne są:
+- Konto AWS
+- [Terraform CLI](https://developer.hashicorp.com/terraform/install) + konto [HCP Terraform Cloud](https://app.terraform.io/) z 3 skonfigurowanymi workspace'ami (`wenttoprod-network`, `wenttoprod-db`, `wenttoprod-infra`)
+- GitHub Actions skonfigurowane z sekretami: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `TF_API_TOKEN`
+- Zarejestrowana domena w Route53 (lub delegowana do Route53)
+- Uruchomienie skryptu bootstrap przed pierwszym deployem:
+```bash
+./scripts/bootstrap-ssm.sh <ghcr-login> <ghcr-password> <api-key> <slack-webhook-url>
+```
+
+---
