@@ -1,4 +1,8 @@
-# Create RDS Postgres instance, we pass subnet group name and security groups using remote state (network workspace)
+# Creating RDS PostgreSQL instance in private subnets - database is not publicly accessible, only EC2 instances can reach it
+# multi_az - AWS automatically creates a standby replica in another AZ, if primary fails it switches over automatically
+# backup_retention_period - AWS keeps automatic backups for 7 days so we can restore to any point in time
+# skip_final_snapshot false - creates a snapshot before destroying the instance so we never lose data by accident
+# storage_encrypted - all data stored on disk is encrypted using KMS
 resource "aws_db_instance" "rds_db_instance" {
   allocated_storage         = 10
   db_name                   = "wenttoprod"
@@ -18,8 +22,8 @@ resource "aws_db_instance" "rds_db_instance" {
   vpc_security_group_ids    = [data.terraform_remote_state.network.outputs.rds_security_group]
 }
 
-# Add SSM parameter - /prod/db-connection-string, username and password passed from HCP variables
-# Secure string means that value is encrypted at rest using KMS also hidden in AWS Console and CLI
+# Creating SSM Parameter with database connection string - stored as SecureString so value is encrypted using KMS
+# EC2 instances fetch this parameter at startup to connect to RDS without hardcoding credentials anywhere in the code
 resource "aws_ssm_parameter" "db_connection_string" {
   name  = "/prod/db-connection-string"
   type  = "SecureString"

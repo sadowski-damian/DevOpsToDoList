@@ -1,14 +1,13 @@
-# Terraform configuration
+# Defining required Terraform version and AWS provider version
+# State is stored remotely in HCP Terraform Cloud in wenttoprod-db workspace
 terraform {
   required_version = "1.14.8"
   required_providers {
     aws = {
-      source = "hashicorp/aws"
-      # Allow any 6.* version
+      source  = "hashicorp/aws"
       version = "~> 6.0"
     }
   }
-  # Remote state in wenttoprod-db workspace
   cloud {
     organization = "damian-sadowski-projekty"
     workspaces {
@@ -16,10 +15,12 @@ terraform {
     }
   }
 }
+
+# All resources will be created in eu-central-1
+# default_tags - applies these tags to every resource automatically so we don't have to repeat them in every resource block
 provider "aws" {
   region = "eu-central-1"
 
-  # We add these tags to all resources created and managed by Terraform
   default_tags {
     tags = {
       Terraform   = "managed"

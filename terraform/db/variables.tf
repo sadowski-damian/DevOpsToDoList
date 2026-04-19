@@ -1,10 +1,10 @@
-# Variable passed from HCP Terraform - sensitive = true so value is masked in plan/apply
+# Database username - passed as sensitive variable from HCP Terraform Cloud, value is masked in plan and apply output
 variable "db_username" {
   type      = string
   sensitive = true
 }
 
-# Variable passed from HCP Terraform - sensitive = true
+# Database password - passed as sensitive variable from HCP Terraform Cloud, value is masked in plan and apply output
 variable "db_password" {
   type      = string
   sensitive = true
