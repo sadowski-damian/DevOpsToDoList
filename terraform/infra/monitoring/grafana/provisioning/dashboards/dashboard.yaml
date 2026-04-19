@@ -1,11 +1,15 @@
-# Grafana dashboard provisioning conf
-# Tells Grafana to load dashboards from /etc/grafana/dashboards directory on startup
-# type: file - dashboards are stored as JSON on disk
-# folder: '' - dashboards will apear in the root folder in Grafana
+# Grafana dashboard provisioning config - tells Grafana where to find dashboard JSON files on disk
+# Grafana reads this file on startup and automatically loads all JSON files from the specified path
+# The dashboard JSON files are downloaded from S3 by the user data script before Grafana starts
+# This means dashboards appear in Grafana automatically without any manual import
+
 apiVersion: 1
 providers:
   - name: default
+    # folder - dashboards will appear in the root folder in Grafana UI
     folder: ''
+    # type: file - tells Grafana to load dashboards from the filesystem instead of a database
     type: file
     options:
+      # path - Grafana scans this directory for JSON dashboard files, this is mounted from the host in docker-compose
       path: /etc/grafana/dashboards

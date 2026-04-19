@@ -1,6 +1,13 @@
+# Prometheus alert rules - Prometheus evaluates these expressions continuously against scraped metrics
+# When a condition is true for the duration specified in "for", Prometheus starts the alert to Alertmanager
+# Alertmanager then sends notification to Slack
+
 groups:
   - name: prometheus_alertmanager_rules
     rules:
+
+      # Fires when Prometheus cannot reach an instance - "up" metric is set to 0 when scrape fails
+      # for: 1m - waits 1 minute before firing to avoid false alarms from brief network hiccups
       - alert: InstanceDown
         expr: up == 0
         for: 1m
@@ -9,6 +16,8 @@ groups:
         annotations:
           summary: "Instance {{ $labels.instance }} is down"
 
+      # Fires when average CPU usage across all cores exceeds 80% for 5 consecutive minutes
+      # irate calculates per-second rate over last 5 minutes.
       - alert: HighCPU
         expr: (100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 80
         for: 5m
@@ -17,6 +26,8 @@ groups:
         annotations:
           summary: "High CPU on {{ $labels.instance }} ({{ $value | printf \"%.0f\" }}%)"
 
+      # Fires when any filesystem has less than 20% free space for 5 consecutive minutes
+      # we divide available bytes by total bytes and multiply by 100 to get the percentage of free space
       - alert: HighDisk
         expr: (node_filesystem_avail_bytes * 100) / node_filesystem_size_bytes < 20
         for: 5m
@@ -24,4 +35,3 @@ groups:
           severity: warning
         annotations:
           summary: "Low disk on {{ $labels.instance }} ({{ $value | printf \"%.0f\" }}% free)"
-  

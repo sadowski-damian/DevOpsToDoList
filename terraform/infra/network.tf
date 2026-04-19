@@ -1,4 +1,4 @@
-# Creating Elastic IPs for our Both NAT gateways
+# Creating Elastic IPs for both NAT gateways - static public IPs that are assigned to NAT gateways
 resource "aws_eip" "elastic_ip_nat_gateway_first" {
   domain = "vpc"
 }
@@ -7,8 +7,8 @@ resource "aws_eip" "elastic_ip_nat_gateway_second" {
   domain = "vpc"
 }
 
-
-# Creating a NAT Gateway in a both public subnets so our private subnets have outbound internet connection
+# Creating NAT gateways in both public subnets - they allow private EC2 instances to reach the internet for outbound traffic
+# Each private subnet gets its own NAT gateway in the same AZ
 resource "aws_nat_gateway" "nat_gateway_first" {
   subnet_id     = data.terraform_remote_state.network.outputs.first_public_subnet_id
   allocation_id = aws_eip.elastic_ip_nat_gateway_first.id
@@ -27,7 +27,8 @@ resource "aws_nat_gateway" "nat_gateway_second" {
   }
 }
 
-# Creating route table for private subnets forwarding to dedicated NAT Gateways
+# Creating route tables for private subnets - any outbound traffic goes through the NAT gateway instead of the internet gateway
+# Each private subnet has its own route table pointing to the NAT gateway in the same AZ
 resource "aws_route_table" "first_private_subnet" {
   vpc_id = data.terraform_remote_state.network.outputs.vpc_id
 
@@ -54,7 +55,7 @@ resource "aws_route_table" "second_private_subnet" {
   }
 }
 
-# Creating association between private subnets and our private route tables
+# Creating associations between private subnets and their route tables - each subnet gets its own route table with dedicated NAT gateway
 resource "aws_route_table_association" "first_private_route_table_association" {
   subnet_id      = data.terraform_remote_state.network.outputs.first_private_subnet_id
   route_table_id = aws_route_table.first_private_subnet.id
@@ -65,9 +66,10 @@ resource "aws_route_table_association" "second_private_route_table_association" 
   route_table_id = aws_route_table.second_private_subnet.id
 }
 
-# Create application load balancer so we can spread traffic between our ec2 instances
-# We deploy alb in our public subnets
-# Also we enabled cross_zone_load_balancing which will result in more efficient traffic spreading
+# Creating Application Load Balancer in public subnets - it receives traffic from the internet and distributes it across EC2 instances
+# enable_cross_zone_load_balancing - spreads traffic evenly across all instances regardless of which AZ they are in
+# drop_invalid_header_fields - drops requests with malformed HTTP headers, adds protection against certain attacks
+# access_logs - all requests are logged to S3 so we have full visibility into what traffic hits our application
 #tfsec:ignore:aws-elb-alb-not-public
 resource "aws_lb" "main_alb" {
   name                             = "main-alb"
@@ -88,8 +90,9 @@ resource "aws_lb" "main_alb" {
   }
 }
 
-# Create target group for our application load balancer
-# Our app will listen on port 8080 also we use http because ALB handles TLS termination
+# Creating target group for ALB - defines where ALB should forward traffic and how to check if instances are healthy
+# We use HTTP because ALB handles TLS termination, so traffic between ALB and EC2 is plain HTTP on port 8080
+# health_check - ALB calls /health every 20 seconds, instance needs 4 consecutive 200 responses to be considered healthy
 resource "aws_lb_target_group" "alb_target_group" {
   name     = "lb-target-group"
   port     = data.terraform_remote_state.network.outputs.app_port
@@ -107,9 +110,8 @@ resource "aws_lb_target_group" "alb_target_group" {
   }
 }
 
-# Create listener for alb
-# Listener catches incoming traffic from the internet and forwards it to our target group
-# We ve got SSL now
+# Creating HTTPS listener on port 443 - this is the main listener that receives encrypted traffic and forwards it to EC2 instances
+# We attach our ACM wildcard certificate here so ALB handles all TLS encryption and decryption
 #tfsec:ignore:aws-elb-http-not-used
 resource "aws_lb_listener" "https" {
   load_balancer_arn = aws_lb.main_alb.arn
@@ -123,6 +125,7 @@ resource "aws_lb_listener" "https" {
   }
 }
 
+# Creating HTTP listener on port 80 - it does not serve any traffic, it just redirects everything to HTTPS with 301
 resource "aws_lb_listener" "front_end" {
   load_balancer_arn = aws_lb.main_alb.arn
   port              = "80"
@@ -139,6 +142,8 @@ resource "aws_lb_listener" "front_end" {
   }
 }
 
+# Creating Route53 DNS record that points our domain to the ALB
+# We use an alias record instead of CNAME because ALB DNS name can change - alias always resolves to the current ALB IPs
 resource "aws_route53_record" "app" {
   zone_id = data.terraform_remote_state.network.outputs.route_53_zone_id
   name    = "wenttoprod.damiansadowski.cloud"
@@ -151,6 +156,8 @@ resource "aws_route53_record" "app" {
   }
 }
 
+# Uploading Grafana dashboard JSON file to S3 - monitoring instance downloads it on startup to provision the dashboard automatically
+# etag - Terraform detects when the file changes and re-uploads it, so the dashboard in S3 is always up to date
 resource "aws_s3_object" "grafana_dashboard" {
   bucket = data.terraform_remote_state.network.outputs.monitoring_config_bucket_name
   key    = "grafana/node-exporter.json"
@@ -158,6 +165,9 @@ resource "aws_s3_object" "grafana_dashboard" {
   etag   = filemd5("./monitoring/grafana/dashboards/node-exporter.json")
 }
 
+# Creating WAF and attaching it to the ALB - protects our application from common web attacks
+# AWSManagedRulesCommonRuleSet - AWS managed rules that block OWASP Top 10 threats like SQL injection and XSS
+# RateBasedRule - blocks any single IP that sends more than 1000 requests in 5 minutes to prevent abuse
 resource "aws_wafv2_web_acl" "alb_waf" {
   name  = "alb-waf"
   scope = "REGIONAL"
@@ -217,6 +227,7 @@ resource "aws_wafv2_web_acl" "alb_waf" {
   }
 }
 
+# Associating WAF with our ALB - without this the WAF exists but does not inspect any traffic
 resource "aws_wafv2_web_acl_association" "main" {
   resource_arn = aws_lb.main_alb.arn
   web_acl_arn  = aws_wafv2_web_acl.alb_waf.arn

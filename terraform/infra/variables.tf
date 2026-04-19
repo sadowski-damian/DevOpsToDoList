@@ -1,3 +1,4 @@
+# EC2 instance type for both app and monitoring instances - validation only allows t3.micro or t2.micro to keep costs low
 variable "instance_type" {
   type        = string
   description = "EC2 instance type (t3.micro or t2.micro)"

@@ -1,4 +1,8 @@
-# ASG Launch template
+# Creating launch template for our ASG - it defines what every new EC2 instance will look like when ASG creates one 
+# update_default_version - every time we update the template it automatically becomes the new default version used by ASG
+# image_id - we use the latest AL2023 AMI fetched dynamically from AWS SSM so we never run on an outdated image
+# http_tokens required - enforces IMDSv2 on every instance, protects against SSRF attacks on the metadata endpoint
+# user_data - startup script that installs Docker, pulls our app image from GHCR and starts Node Exporter for metrics
 resource "aws_launch_template" "ec2_launch_template" {
   name                   = "ec2-launch-template"
   update_default_version = true
@@ -29,7 +33,10 @@ resource "aws_launch_template" "ec2_launch_template" {
   }
 }
 
-# ASG
+# Creating Auto Scaling Group - it maintains the desired number of EC2 instances and replaces unhealthy ones automatically
+# vpc_zone_identifier - we spread instances across both private subnets so if one AZ goes down we still have capacity
+# health_check_type ELB - ASG uses ALB health checks to decide if instance is healthy, not just EC2 status checks
+# health_check_grace_period - gives each instance 120 seconds to finish starting before ASG begins health checking it
 resource "aws_autoscaling_group" "main_asg" {
   name                      = "main-asg"
   vpc_zone_identifier       = [data.terraform_remote_state.network.outputs.first_private_subnet_id, data.terraform_remote_state.network.outputs.second_private_subnet_id]
@@ -47,6 +54,9 @@ resource "aws_autoscaling_group" "main_asg" {
   }
 }
 
+# Creating monitoring EC2 instance in private subnet - runs Prometheus, Grafana and Alertmanager via Docker Compose
+# templatefile - we inject all monitoring config files directly into the user data script at apply time
+# root_block_device encrypted - disk is encrypted so all collected metrics are protected at rest
 resource "aws_instance" "ec2_monitoring_instance" {
   ami                    = data.aws_ssm_parameter.al2023_ami.value
   instance_type          = var.instance_type

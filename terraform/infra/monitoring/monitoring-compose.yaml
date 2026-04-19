@@ -1,24 +1,35 @@
+# Docker Compose file that runs three monitoring containers on the monitoring EC2 instance
+# How everything connects:
+#   Prometheus scrapes metrics from Node Exporter running on app EC2 instances (port 9100)
+#   When an alert rule fires, Prometheus sends the alert to Alertmanager (alertmanager:9093)
+#   Alertmanager forwards the alert to Slack
+#   Grafana connects to Prometheus as a datasource and displays the metrics on dashboards
+# All config files were written to the host filesystem by the user data script before this compose file runs
+
 services:
   prometheus:
     image: prom/prometheus
     container_name: prometheus
     restart: unless-stopped
     ports:
+      # Exposed on host so we can access Prometheus using SSM port forwarding
       - "9090:9090"
     volumes:
-      # We store metrics in created volume so they live even after container restart 
+      # This volume keeps collected metrics on disk so they survive container restarts
       - prometheus_data:/prometheus
-      # We mount file with prometheus configuration from host to the container 
+      # Config and rules files were written to host by user data script - we mount them into the container
       - /etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - /etc/prometheus/rules.yaml:/etc/prometheus/rules.yaml
-      
+
   alertmanager:
     image: prom/alertmanager
     container_name: alertmanager
     restart: unless-stopped
     ports:
+      # Prometheus sends alerts to alertmanager on this port using the container name as hostname
       - "9093:9093"
     volumes:
+      # Config file was written to host by user data script with Slack webhook URL already injected
       - /etc/alertmanager/alertmanager.yaml:/etc/alertmanager/alertmanager.yml
 
   grafana:
@@ -26,20 +37,21 @@ services:
     container_name: grafana
     restart: unless-stopped
     ports:
+      # Exposed on host so we can access Grafana using SSM port forwarding
       - "3000:3000"
     volumes:
-      # Same as with prometheus 
+      # This volume keeps Grafana settings and user data between container restarts
       - grafana_data:/var/lib/grafana
-      # Mounts datasource and dashboard provides configs from host
+      # Provisioning configs tell Grafana to auto-configure Prometheus datasource and load dashboards on startup
       - /etc/grafana/provisioning:/etc/grafana/provisioning
-      # Mounts dashboard JSON files downloaded from S3
+      # Dashboard JSON files downloaded from S3 by user data script are mounted here
       - /etc/grafana/dashboards:/etc/grafana/dashboards
-    # Prometheus has to be up before grafana
+    # Grafana needs Prometheus to be running before it starts so the datasource connection works immediately
     depends_on:
       - prometheus
 
 volumes:
-  # Grafana data that stays between container restarts
+  # Persists Grafana settings and configurations between container restarts
   grafana_data:
-  # Prometheus metrics that stays between container restarts 
+  # Persists all scraped Prometheus metrics between container restarts
   prometheus_data:
