@@ -29,7 +29,9 @@ co pozwala niszczyć kosztowne zasoby i pozostawiać te, które nie generują ko
 Infrastruktura z workspace `infra` jest **automatycznie niszczona codziennie o 22:30 UTC** — workspace `network` oraz `db` pozostają.
 Takie rozwiązanie pozwala zminimalizować koszty, jednocześnie zapewniając szybkie wdrożenie aplikacji.
 
-![Diagram Architektury AWS](./docs/infra.svg)
+<p align="center">
+  <img src="./docs/infra.svg" alt="Diagram Architektury AWS" width="800">
+</p>
 
 ---
 
@@ -59,12 +61,13 @@ Każdy push do `main` zmieniający pliki w `/src` uruchamia automatycznie:
 8. **Instance Refresh** — ASG płynnie wymienia instancje na nowe z najnowszym obrazem (`MinHealthyPercentage=50`), zero downtime.
 
 <p align="center">
-  <img src="./docs/deploy.svg" alt="Przebieg pipeline w GitHub Actions" width="900">
+  <img src="./docs/deploy.svg" alt="Przebieg pipeline w GitHub Actions" width="800">
   <br>
   <sub>Przebieg pipeline w GitHub Actions — od builda przez tfsec, plany i apply każdej warstwy, aż do instance refresh</sub>
 </p>
 
 Każdy błąd na dowolnym etapie → powiadomienie na Slack.
+
 ---
 
 ## Bezpieczeństwo
@@ -113,19 +116,19 @@ Dedykowana instancja monitoringu w prywatnej podsieci uruchamia Prometheus, Graf
 ### Screenshoty
 
 <p align="center">
-  <img src="./docs/grafana.png" alt="Grafana dashboard" width="900">
+  <img src="./docs/grafana.png" alt="Grafana dashboard" width="800">
   <br>
   <sub>Dashboard Node Exporter Full w Grafanie — metryki CPU, RAM, dysk i sieć wszystkich instancji ASG w jednym miejscu</sub>
 </p>
 
 <p align="center">
-  <img src="./docs/notifprometheus.png" alt="Slack alert z Alertmanagera" width="600">
+  <img src="./docs/notifprometheus.png" alt="Slack alert z Alertmanagera" width="800">
   <br>
   <sub>Powiadomienie Slack wysłane przez Alertmanagera — alert InstanceDown po wykryciu niedostępnej instancji</sub>
 </p>
 
 <p align="center">
-  <img src="./docs/notifpipeline.png" alt="Slack alert z pipeline" width="600">
+  <img src="./docs/notifpipeline.png" alt="Slack alert z pipeline" width="800">
   <br>
   <sub>Powiadomienie Slack o błędzie w pipeline — zawiera nazwę joba, branch, autora</sub>
 </p>

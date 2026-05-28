@@ -3,7 +3,7 @@ using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
-
+// t est
 // Grab connection string from app.settings.json or environment var ConnectionStrings__Postgres
 var connectionString = builder.Configuration.GetConnectionString("Postgres");
 
