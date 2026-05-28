@@ -15,6 +15,8 @@ RUN dotnet publish WentToProd/*.csproj -c Release -o /app/publish
 
 # Changing base image to aspnet, only runtime to run the app - without compilator and building tools ~220MB, final image contains only files that we copy
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
+# Upgrade OS packages in the runtime stage to patch libgnutls30 CVEs (e.g. CVE-2026-33845, CVE-2026-42010)
+RUN apt-get update && apt-get upgrade -y
 # Setting another working directory, this is where our app lives
 WORKDIR /app
 
