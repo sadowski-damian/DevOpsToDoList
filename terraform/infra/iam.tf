@@ -32,7 +32,7 @@ resource "aws_iam_role" "ec2_role_monitoring" {
   assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
 }
 
-# Creating instance profile for monitoring instance - reousce to attach IAM role to the monitoring EC2
+# Creating instance profile for monitoring instance - resource to attach IAM role to the monitoring EC2
 resource "aws_iam_instance_profile" "ec2_instance_profile_monitoring" {
   name = "ec2-instance-profile-monitoring"
   role = aws_iam_role.ec2_role_monitoring.name

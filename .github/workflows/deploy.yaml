@@ -58,9 +58,9 @@ jobs:
       
       # Running Trivy scan 
       - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with: 
-          # We are using image that we built in the previous step, selecting it by tag that we added
+          # We are using image that we built in the pdrevious step, selecting it by tag that we added
           image-ref: ghcr.io/${{ github.repository_owner }}/wenttoprod:${{ github.sha }}
           # Result will be shown in a table format
           format: table
