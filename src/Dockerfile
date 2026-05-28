@@ -1,9 +1,9 @@
-# Upgrade OS packages to pick up latest security patches
-RUN apt-get update && apt-get upgrade -y 
 # Build stage from a base image .NET SDK 8.0, it contains compiler and building tools ~ 800MB
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build 
 # Setting working directory, next commands will be run in /src directory (if it doesnt exist, Docker creates the directory)
 WORKDIR /src
+# Upgrade OS packages to pick up latest security patches
+RUN apt-get update && apt-get upgrade -y 
 
 # Copy .csproj file which contains list of dependencies
 COPY WentToProd/*.csproj ./WentToProd/
